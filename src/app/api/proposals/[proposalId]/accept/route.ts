@@ -6,16 +6,15 @@ import { prisma } from "@/library/prisma";
 // POST /api/proposals/[proposalId]/accept - Accept a proposal and create contract
 export async function POST(
   req: NextRequest,
-  { params }: { params: { proposalId: string } }
+  { params }: { params: Promise<{ proposalId: string }> }
 ) {
   try {
+    const { proposalId } = await params
     const session = await getServerSession();
     
     if (!session?.user || session.user.userType !== "CLIENT") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const proposalId = params.proposalId;
 
     // Get proposal with job details
     const proposal = await prisma.proposal.findUnique({

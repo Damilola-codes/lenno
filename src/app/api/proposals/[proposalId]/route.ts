@@ -13,13 +13,13 @@ const updateProposalSchema = z.object({
   status: z.enum(["PENDING", "ACCEPTED", "REJECTED"]).optional()
 });
 
-export async function GET(req: NextRequest, { params }: { params: { proposalId: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ proposalId: string }> }) {
     try {
+    const { proposalId } = await params
     const session = await getServerSession();
     if (!session?.user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { proposalId } = params;
     const proposal = await prisma.proposal.findUnique({
         where: { id: proposalId },
         include: {
@@ -79,13 +79,13 @@ catch (error) {
 }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { proposalId: string } }) {
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ proposalId: string }> }) {
   try {
+    const { proposalId } = await params
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { proposalId } = params;
     const existingProposal = await prisma.proposal.findUnique({
         where: { id: proposalId }
     });
@@ -113,13 +113,13 @@ catch (error) {
 }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { proposalId: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ proposalId: string }> }) {
   try {
+    const { proposalId } = await params
     const session = await getServerSession();
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const { proposalId } = params;
     const existingProposal = await prisma.proposal.findUnique({
         where: { id: proposalId }
     });

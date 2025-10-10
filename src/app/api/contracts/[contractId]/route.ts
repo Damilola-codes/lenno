@@ -9,19 +9,18 @@ const updateContractSchema = z.object({
   endDate: z.string().optional()
 });
 
-// GET /api/contracts/[contractId] - Get specific contract details
+// GET /api/contracts/[contractId] - Get contract details
 export async function GET(
   req: NextRequest,
-  { params }: { params: { contractId: string } }
+  { params }: { params: Promise<{ contractId: string }> }
 ) {
   try {
+    const { contractId } = await params
     const session = await getServerSession();
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const contractId = params.contractId;
 
     const contract = await prisma.contract.findUnique({
       where: { id: contractId },
@@ -89,9 +88,10 @@ export async function GET(
 // PUT /api/contracts/[contractId] - Update contract status
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { contractId: string } }
+  { params }: { params: Promise<{ contractId: string }> }
 ) {
   try {
+    const { contractId } = await params
     const session = await getServerSession();
     
     if (!session?.user) {
@@ -100,7 +100,6 @@ export async function PUT(
 
     const body = await req.json();
     const validatedData = updateContractSchema.parse(body);
-    const contractId = params.contractId;
 
     // Get contract to check ownership
     const contract = await prisma.contract.findUnique({
@@ -252,16 +251,15 @@ export async function PATCH(
 // DELETE /api/contracts/[contractId] - Delete a contract
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { contractId: string } }
+  { params }: { params: Promise<{ contractId: string }> }
 ) {
   try {
+    const { contractId } = await params
     const session = await getServerSession();
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const contractId = params.contractId;
 
     // Get contract to check ownership and status
     const contract = await prisma.contract.findUnique({

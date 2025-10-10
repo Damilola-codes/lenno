@@ -13,16 +13,15 @@ const createProposalSchema = z.object({
 // GET /api/jobs/[jobId]/proposals - Get all proposals for a job (CLIENT only)
 export async function GET(
   req: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params
     const session = await getServerSession();
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const jobId = params.jobId;
 
     // Check if user owns this job (for clients) or if they're viewing their own proposal
     const job = await prisma.job.findUnique({
@@ -136,9 +135,10 @@ export async function GET(
 // POST /api/jobs/[jobId]/proposals - Submit a proposal (FREELANCER only)
 export async function POST(
   req: NextRequest,
-  { params }: { params: { jobId: string } }
+  { params }: { params: Promise<{ jobId: string }> }
 ) {
   try {
+    const { jobId } = await params
     const session = await getServerSession();
     
     if (!session || session.user.userType !== "FREELANCER") {
@@ -147,7 +147,6 @@ export async function POST(
 
     const body = await req.json();
     const validatedData = createProposalSchema.parse(body);
-    const jobId = params.jobId;
 
     // Check if job exists and is open
     const job = await prisma.job.findUnique({

@@ -14,9 +14,10 @@ const createMilestoneSchema = z.object({
 // POST /api/contracts/[contractId]/milestones - Create milestone
 export async function POST(
   req: NextRequest,
-  { params }: { params: { contractId: string } }
+  { params }: { params: Promise<{ contractId: string }> }
 ) {
   try {
+    const { contractId } = await params
     const session = await getServerSession();
     
     if (!session?.user) {
@@ -25,7 +26,6 @@ export async function POST(
 
     const body = await req.json();
     const validatedData = createMilestoneSchema.parse(body);
-    const contractId = params.contractId;
 
     // Check if contract exists and user has access
     const contract = await prisma.contract.findUnique({
@@ -72,16 +72,15 @@ export async function POST(
 // GET /api/contracts/[contractId]/milestones - Get milestones for contract
 export async function GET(
   req: NextRequest,
-  { params }: { params: { contractId: string } }
+  { params }: { params: Promise<{ contractId: string }> }
 ) {
   try {
+    const { contractId } = await params
     const session = await getServerSession();
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
-    const contractId = params.contractId;
 
     // Check if contract exists and user has access
     const contract = await prisma.contract.findUnique({
