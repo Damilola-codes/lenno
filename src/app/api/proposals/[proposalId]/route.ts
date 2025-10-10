@@ -1,8 +1,7 @@
 // /api/proposals/[proposalId] - GET, PUT, DELETE
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/library/auth";
+import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
 import { z } from "zod";
 
@@ -16,7 +15,7 @@ const updateProposalSchema = z.object({
 
 export async function GET(req: NextRequest, { params }: { params: { proposalId: string } }) {
     try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     if (!session?.user) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -81,10 +80,10 @@ catch (error) {
 }
 
 export async function PUT(req: NextRequest, { params }: { params: { proposalId: string } }) {
-    try {
-    const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession();
     if (!session?.user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { proposalId } = params;
     const existingProposal = await prisma.proposal.findUnique({
@@ -115,10 +114,10 @@ catch (error) {
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: { proposalId: string } }) {
-    try {
-    const session = await getServerSession(authOptions);
+  try {
+    const session = await getServerSession();
     if (!session?.user) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const { proposalId } = params;
     const existingProposal = await prisma.proposal.findUnique({

@@ -1,7 +1,6 @@
 // app/api/jobs/[jobId]/proposals/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/library/auth";
+import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
 import { z } from "zod";
 
@@ -17,9 +16,9 @@ export async function GET(
   { params }: { params: { jobId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -140,7 +139,7 @@ export async function POST(
   { params }: { params: { jobId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
     if (!session || session.user.userType !== "FREELANCER") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

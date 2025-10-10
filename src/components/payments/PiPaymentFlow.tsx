@@ -16,12 +16,13 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 
 interface PaymentFlowProps {
-  amount: number
+  initialAmount?: number
   memo: string
   jobId?: string
   type: 'job_payment' | 'milestone_payment' | 'bonus' | 'tip' | 'fee'
   onComplete: (success: boolean, txid?: string) => void
   onCancel: () => void
+  allowAmountInput?: boolean
 }
 
 interface PaymentStep {
@@ -41,17 +42,25 @@ interface PaymentData {
 }
 
 export default function PiPaymentFlow({ 
-  amount, 
+  initialAmount, 
   memo, 
   jobId, 
   type, 
   onComplete, 
-  onCancel 
+  onCancel,
+  allowAmountInput = true 
 }: PaymentFlowProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [rewardPoints, setRewardPoints] = useState(0)
+  const [amount, setAmount] = useState(initialAmount || 0)
+  const [feeBreakdown, setFeeBreakdown] = useState<{
+    userAmount: number
+    platformFee: number
+    piNetworkFee: number
+    totalAmount: number
+  } | null>(null)
 
   const steps: PaymentStep[] = [
     {
@@ -99,7 +108,7 @@ export default function PiPaymentFlow({
       setIsProcessing(true)
       
       // Create payment record in backend
-      const response = await fetch('/api/payments', {
+      const response = await fetch('/api/wallet/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -116,7 +125,8 @@ export default function PiPaymentFlow({
         throw new Error('Failed to create payment')
       }
 
-      const { payment } = await response.json()
+      const { payment, feeBreakdown } = await response.json()
+      setFeeBreakdown(feeBreakdown)
       
       // Update step status
       updateStepStatus(0, 'completed')
@@ -303,8 +313,112 @@ export default function PiPaymentFlow({
 
         {!showCelebration && (
           <>
+            {/* Amount Input Section */}
+            {allowAmountInput && currentStep === 0 && (
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-primary-900 mb-4">Send Pi</h2>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-primary-700 mb-2">
+                      Amount to Send
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                        min="0.01"
+                        step="0.01"
+                        className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 text-lg"
+                        placeholder="0.00"
+                      />
+                      <span className="absolute right-3 top-3 text-lg font-semibold text-primary-600">π</span>
+                    </div>
+                  </div>
+
+                  {/* Fee Breakdown Preview */}
+                  {amount > 0 && (
+                    <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
+                      <h3 className="text-sm font-medium text-primary-700 mb-3">Fee Breakdown</h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-primary-600">Send Amount:</span>
+                          <span className="font-medium text-primary-900">π{amount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-primary-600">Platform Fee (5%):</span>
+                          <span className="font-medium text-primary-900">π{(amount * 0.05).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-primary-600">Pi Network Fee:</span>
+                          <span className="font-medium text-primary-900">π0.01</span>
+                        </div>
+                        <div className="border-t border-primary-300 pt-2 flex justify-between">
+                          <span className="font-medium text-primary-700">Total Cost:</span>
+                          <span className="font-bold text-secondary-600">π{(amount + (amount * 0.05) + 0.01).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    onClick={handleInitializePayment}
+                    disabled={amount <= 0 || isProcessing}
+                    className="w-full h-12 bg-secondary-600 hover:bg-secondary-700 text-white"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="w-4 h-4 mr-2" />
+                        Continue Payment
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Payment Processing Header */}
+            {(currentStep > 0 || !allowAmountInput) && (
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-r from-secondary-500 to-secondary-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <span className="text-2xl font-bold text-white">π</span>
+                </div>
+                <h2 className="text-xl font-bold text-primary-900">Pi Network Payment</h2>
+                <p className="text-primary-600">Sending π{amount.toFixed(2)}</p>
+                
+                {/* Fee Breakdown Display */}
+                {feeBreakdown && (
+                  <div className="mt-4 bg-primary-50 border border-primary-200 rounded-lg p-4">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-primary-600">Send Amount:</span>
+                        <span className="font-medium text-primary-900">π{feeBreakdown.userAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-primary-600">Platform Fee:</span>
+                        <span className="font-medium text-primary-900">π{feeBreakdown.platformFee.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-primary-600">Pi Network Fee:</span>
+                        <span className="font-medium text-primary-900">π{feeBreakdown.piNetworkFee.toFixed(2)}</span>
+                      </div>
+                      <div className="border-t border-primary-300 pt-2 flex justify-between">
+                        <span className="font-medium text-primary-700">Total:</span>
+                        <span className="font-bold text-secondary-600">π{feeBreakdown.totalAmount.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Header */}
-            <div className="text-center mb-6">
+            <div className="text-center mb-6" style={{display: 'none'}}>
               <div className="w-16 h-16 bg-gradient-to-r from-secondary-500 to-secondary-600 rounded-full flex items-center justify-center mx-auto mb-3">
                 <span className="text-2xl font-bold text-white">π</span>
               </div>
@@ -312,8 +426,11 @@ export default function PiPaymentFlow({
               <p className="text-primary-600">Sending π{amount}</p>
             </div>
 
-            {/* Payment Details */}
-            <Card className="mb-6 bg-primary-50 border-primary-200">
+            {/* Payment Processing Steps */}
+            {(currentStep > 0 || !allowAmountInput) && (
+              <>
+                {/* Payment Details */}
+                <Card className="mb-6 bg-primary-50 border-primary-200">
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-primary-600">Amount:</span>
@@ -399,6 +516,8 @@ export default function PiPaymentFlow({
                 </Button>
               )}
             </div>
+              </>
+            )}
           </>
         )}
       </motion.div>

@@ -1,7 +1,6 @@
 // app/api/proposals/[proposalId]/accept/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/library/auth";
+import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
 
 // POST /api/proposals/[proposalId]/accept - Accept a proposal and create contract
@@ -10,9 +9,9 @@ export async function POST(
   { params }: { params: { proposalId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
-    if (!session || session.user.userType !== "CLIENT") {
+    if (!session?.user || session.user.userType !== "CLIENT") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

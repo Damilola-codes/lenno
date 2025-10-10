@@ -498,11 +498,12 @@ export default function WalletPage() {
       {/* Payment Flow Modal */}
       {showPaymentFlow && (
         <PiPaymentFlow
-          amount={10} // Default send amount
+          initialAmount={10} // Default send amount
           memo={`Send Pi via Lenno Wallet`}
           onComplete={handlePaymentComplete}
           onCancel={handlePaymentCancel}
           type="fee"
+          allowAmountInput={true}
         />
       )}
     </MobileLayout>
