@@ -15,6 +15,46 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }
 
+    // Check if this is a demo/temp user ID
+    if (userId === 'demo-user-id' || userId === 'temp-user') {
+      return NextResponse.json({
+        userType: 'FREELANCER',
+        totalEarnings: 125.75,
+        pendingPayments: 45.50,
+        completedJobs: 3,
+        activeProjects: 2,
+        totalJobs: 5,
+        acceptedProposals: 4,
+        monthlyEarnings: 85.25,
+        weeklyEarnings: 25.50,
+        recentActivity: [
+          {
+            id: '1',
+            type: 'proposal_accepted',
+            title: 'Proposal Accepted',
+            description: 'Your proposal for "Build a React Dashboard" was accepted',
+            amount: 150,
+            timestamp: new Date().toISOString(),
+            status: 'accepted'
+          },
+          {
+            id: '2',
+            type: 'payment_received',
+            title: 'Payment Received',
+            description: 'Received payment for completed milestone',
+            amount: 75.50,
+            timestamp: new Date(Date.now() - 86400000).toISOString(),
+            status: 'completed'
+          }
+        ],
+        monthlyTrends: [
+          { month: 'Nov', earnings: 45.25 },
+          { month: 'Dec', earnings: 85.75 },
+          { month: 'Jan', earnings: 125.50 }
+        ]
+      });
+    }
+
     // Get user info to determine user type
     const user = await prisma.user.findUnique({
       where: { id: userId },

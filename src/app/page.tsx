@@ -130,7 +130,7 @@ export default function HomePage() {
                 <div className="flex space-x-2">
                   <Button
                     variant="ghost"
-                    onClick={() => router.push('/auth/signin')}
+                    onClick={() => router.push('/auth/signup')}
                   >
                     Sign In
                   </Button>

@@ -1,7 +1,13 @@
-// app/api/[...nextauth]/route.ts
-import NextAuth from "next-auth";
-import { authOptions } from "@/library/auth";
+// Redirect NextAuth routes to Pi Network authentication
+import { NextRequest, NextResponse } from 'next/server'
 
-const handler = NextAuth(authOptions);
+// Since we're using Pi Network authentication, redirect all NextAuth calls
+export async function GET(request: NextRequest) {
+  console.log('NextAuth route accessed, redirecting to Pi Network auth')
+  return NextResponse.redirect(new URL('/auth/signup', request.url))
+}
 
-export { handler as GET, handler as POST };
+export async function POST(request: NextRequest) {
+  console.log('NextAuth POST route accessed, redirecting to Pi Network auth')
+  return NextResponse.redirect(new URL('/auth/signup', request.url))
+}

@@ -1,8 +1,8 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { 
-  LayoutDashboard,
+  BarChart3,
   DollarSign,
   FileText,
   CheckCircle,
@@ -14,6 +14,7 @@ import {
 import MobileLayout from '@/components/layout/MobileLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import { PiAuth, PiUser } from '@/library/auth'
 
 interface DashboardStats {
   totalEarnings: number
@@ -37,33 +38,25 @@ interface RecentActivity {
 }
 
 type TimeRange = 'week' | 'month' | 'year'
-type UserType = 'CLIENT' | 'FREELANCER'
 
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [userType] = useState<UserType>('FREELANCER') // This would come from auth context
+  const [currentUser, setCurrentUser] = useState<PiUser | null>(null)
   const [timeRange, setTimeRange] = useState<TimeRange>('month')
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, []) // Only fetch on initial mount
-
-  const handleTimeRangeChange = (newRange: TimeRange) => {
-    setTimeRange(newRange)
-    // Optionally fetch new data immediately
-    // fetchDashboardData() // Uncomment if you want immediate fetch
-  }
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
       
+      // For now, use the current user ID or demo data
+      const userId = currentUser?.id || 'demo-user-id'
+      
       // Fetch stats
-      const statsResponse = await fetch(`/api/dashboard/stats?range=${timeRange}`)
+      const statsResponse = await fetch(`/api/dashboard/stats?range=${timeRange}&userId=${userId}`)
       
       if (!statsResponse.ok) {
         if (statsResponse.status === 400) {
@@ -115,6 +108,24 @@ export default function Dashboard() {
     } finally {
       setLoading(false)
     }
+  }, [currentUser?.id, timeRange])
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const user = PiAuth.getCurrentUser()
+    if (!user) {
+      // Redirect to auth if not authenticated
+      window.location.href = '/auth/signup'
+      return
+    }
+    setCurrentUser(user)
+    fetchDashboardData()
+  }, [fetchDashboardData]) // Include fetchDashboardData dependency
+
+  const handleTimeRangeChange = (newRange: TimeRange) => {
+    setTimeRange(newRange)
+    // Optionally fetch new data immediately
+    // fetchDashboardData() // Uncomment if you want immediate fetch
   }
 
   const getActivityIcon = (type: RecentActivity['type']) => {
@@ -206,16 +217,124 @@ export default function Dashboard() {
   return (
     <MobileLayout>
       <div className="px-4 py-6 space-y-6">
-        {/* Header */}
+        {/* Header with Welcome */}
         <div className="space-y-4">
+          {/* Welcome Message */}
+          <div className="bg-gradient-to-r from-secondary-50 to-secondary-100 rounded-xl p-6 border border-secondary-200">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-12 h-12 bg-gradient-to-r from-secondary-600 to-secondary-500 rounded-full flex items-center justify-center">
+                <span className="text-white font-bold text-xl">π</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Welcome to Lenno, @{currentUser?.username}! 👋
+                </h2>
+                <p className="text-sm text-gray-600">
+                  {currentUser?.userType === 'CLIENT' 
+                    ? 'Ready to find amazing Pi Network talent?' 
+                    : 'Ready to earn Pi with your skills?'
+                  }
+                </p>
+              </div>
+            </div>
+            
+            {/* Quick Action Buttons */}
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {currentUser?.userType === 'CLIENT' ? (
+                <>
+                  <Button 
+                    size="sm" 
+                    className="accent-gradient text-white hover:opacity-90"
+                    onClick={() => window.location.href = '/jobs'}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Post a Job
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = '/proposals'}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    View Proposals
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    size="sm" 
+                    className="accent-gradient text-white hover:opacity-90"
+                    onClick={() => window.location.href = '/jobs'}
+                  >
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Find Jobs
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.location.href = '/profile'}
+                  >
+                    <User className="w-4 h-4 mr-2" />
+                    Complete Profile
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Beta Waitlist Notice */}
+          <div className="bg-gradient-to-r from-accent-50 to-warning-50 rounded-xl p-6 border border-accent-200">
+            <div className="flex items-start space-x-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-accent-500 to-warning-500 rounded-full flex items-center justify-center flex-shrink-0">
+                <Clock className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  🚀 Welcome to Lenno Beta!
+                </h3>
+                <p className="text-sm text-gray-600 mb-3">
+                  You&apos;re among the first Pi Network pioneers to experience our freelance marketplace. 
+                  We&apos;re currently in beta testing phase, and your feedback is invaluable!
+                </p>
+                <div className="bg-white rounded-lg p-4 border border-accent-200 mb-4">
+                  <h4 className="font-medium text-gray-900 mb-2">What&apos;s Coming Soon:</h4>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li>• Full Pi Network payment integration</li>
+                    <li>• Advanced matching algorithms</li>
+                    <li>• Milestone-based project management</li>
+                    <li>• Pioneer reputation system</li>
+                    <li>• Multi-language support</li>
+                  </ul>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button 
+                    size="sm" 
+                    className="bg-gradient-to-r from-accent-500 to-warning-500 text-white hover:opacity-90"
+                    onClick={() => window.open('https://forms.gle/beta-feedback', '_blank')}
+                  >
+                    Share Feedback
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => window.open('https://t.me/lenno_community', '_blank')}
+                  >
+                    Join Community
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-primary-900">Dashboard</h1>
+              <h1 className="text-2xl font-bold text-primary-900">Your Analytics</h1>
               <p className="text-sm text-primary-600 mt-1">
-                {userType === 'CLIENT' ? 'Manage your projects and team' : 'Track your freelance activity'}
+                {currentUser?.userType === 'CLIENT' ? 'Track your project performance' : 'Monitor your freelance progress'}
               </p>
             </div>
-            <LayoutDashboard className="w-8 h-8 text-primary-400" />
+            <BarChart3 className="w-8 h-8 text-primary-400" />
           </div>
 
           {/* Time Range Selector */}
@@ -254,7 +373,7 @@ export default function Dashboard() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {userType === 'FREELANCER' ? (
+          {currentUser?.userType === 'FREELANCER' ? (
             <>
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -390,7 +509,7 @@ export default function Dashboard() {
         </div>
 
         {/* Earnings Chart (Simplified) */}
-        {userType === 'FREELANCER' && (
+        {currentUser?.userType === 'FREELANCER' && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -497,7 +616,7 @@ export default function Dashboard() {
           transition={{ delay: 0.6 }}
           className="grid grid-cols-2 gap-4"
         >
-          {userType === 'FREELANCER' ? (
+          {currentUser?.userType === 'FREELANCER' ? (
             <>
               <Button 
                 onClick={() => window.location.href = '/jobs'}

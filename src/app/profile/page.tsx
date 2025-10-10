@@ -1,3 +1,4 @@
+"use client"
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { 
@@ -8,12 +9,13 @@ import {
   MapPin,
   Calendar,
   Briefcase,
+  Shield
 } from 'lucide-react'
 import MobileLayout from '@/components/layout/MobileLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import Image from 'next/image'
+import { PiAuth } from '@/library/auth'
 
 interface UserProfile {
   id: string
@@ -48,10 +50,10 @@ interface UserProfile {
   skills?: Array<{
     id: string
     name: string
-    category: string
-    level?: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED' | 'EXPERT'
+    level: string
   }>
   reviews?: Array<{
+    id: string
     rating: number
     comment: string
     clientName: string
@@ -75,60 +77,75 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'reviews' | 'settings'>('overview')
 
   useEffect(() => {
+    const user = PiAuth.getCurrentUser()
+    if (!user) {
+      window.location.href = '/auth/signup'
+      return
+    }
     fetchProfile()
-  }, [])
+  }, []) // Remove fetchProfile dependency to avoid hoisting issues
 
   const fetchProfile = async () => {
     try {
       setLoading(true)
-      const response = await fetch('/api/profile')
-      const data = await response.json()
       
-      if (response.ok) {
-        setProfile(data.user)
-      } else {
-        console.error('Failed to fetch profile:', data.error)
-      }
+      // For beta, use mock data based on current user
+      const user = PiAuth.getCurrentUser()
+      if (!user) return
+      
+      setTimeout(() => {
+        setProfile({
+          id: user.id,
+          firstName: user.username?.split('_')[0] || 'Pioneer',
+          lastName: user.username?.split('_')[1] || 'User',
+          username: user.username,
+          email: user.email || 'pioneer@pi.network',
+          userType: user.userType,
+          createdAt: new Date().toISOString(),
+          location: 'Pi Network',
+          bio: `Verified Pi Network pioneer specializing in ${user.userType === 'FREELANCER' ? 'professional services' : 'project management'}`,
+          profile: {
+            title: user.userType === 'FREELANCER' ? 'Pi Network Freelancer' : 'Pi Network Client',
+            hourlyRate: user.userType === 'FREELANCER' ? 25 : undefined,
+            availability: 'Available',
+            experience: '2+ years in digital marketplace',
+          },
+          stats: {
+            totalJobs: Math.floor(Math.random() * 10) + 1,
+            completedJobs: Math.floor(Math.random() * 8) + 1,
+            totalEarnings: Math.floor(Math.random() * 1000) + 500,
+            averageRating: 4.8,
+            responseTime: 2,
+            successRate: 95
+          }
+        })
+        setLoading(false)
+      }, 1000)
     } catch (error) {
       console.error('Error fetching profile:', error)
-    } finally {
       setLoading(false)
     }
   }
 
-  const handleSaveProfile = async () => {
-    if (!profile) return
-    
+  const saveProfile = async () => {
     try {
-      const response = await fetch('/api/profile', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(profile)
-      })
-
-      if (response.ok) {
-        setEditMode(false)
-        alert('Profile updated successfully!')
-      } else {
-        const error = await response.json()
-        alert(`Error: ${error.error}`)
-      }
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      setEditMode(false)
+      // In real app, would make API call to save changes
     } catch (error) {
       console.error('Error saving profile:', error)
-      alert('Failed to save profile')
     }
   }
 
   if (loading) {
     return (
       <MobileLayout>
-        <div className="px-4 py-6 space-y-6">
+        <div className="px-4 py-6">
           <div className="animate-pulse space-y-6">
-            <div className="h-32 bg-primary-200 rounded-lg"></div>
+            <div className="h-32 bg-primary-200 rounded-xl"></div>
             <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
+              {[...Array(4)].map((_, i) => (
                 <div key={i} className="h-20 bg-primary-200 rounded-lg"></div>
               ))}
             </div>
@@ -142,8 +159,7 @@ export default function ProfilePage() {
     return (
       <MobileLayout>
         <div className="px-4 py-6">
-          <Card className="text-center py-12">
-            <User className="w-12 h-12 mx-auto text-primary-400 mb-4" />
+          <Card>
             <h3 className="text-lg font-medium text-primary-900 mb-2">Profile not found</h3>
             <p className="text-primary-600">Unable to load profile data</p>
           </Card>
@@ -165,26 +181,24 @@ export default function ProfilePage() {
               {/* Edit Button */}
               <button
                 onClick={() => setEditMode(!editMode)}
-                className="absolute top-0 right-0 p-2 text-primary-600 hover:text-primary-900 transition-colors"
+                className="absolute top-4 right-4 p-2 text-primary-600 hover:text-primary-900 hover:bg-primary-100 rounded-lg transition-colors"
               >
-                <Edit2 className="w-5 h-5" />
+                <Edit2 className="w-4 h-4" />
               </button>
 
-              <div className="flex flex-col items-center text-center space-y-4">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6 p-4 sm:p-6">
                 {/* Avatar */}
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-secondary-600 to-secondary-500 flex items-center justify-center">
-                    {profile.avatar ? (
-                      <Image 
-                        src={profile.avatar} 
-                        alt={`${profile.firstName} ${profile.lastName}`}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-2xl font-bold text-white">
-                        {profile.firstName[0]}{profile.lastName[0]}
-                      </span>
-                    )}
+                <div className="relative flex-shrink-0">
+                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-br from-primary-100 to-primary-200 border-2 border-primary-300 flex items-center justify-center group hover:bg-gradient-to-br hover:from-primary-200 hover:to-primary-300 transition-all cursor-pointer">
+                    <User className="w-8 h-8 sm:w-10 sm:h-10 text-primary-600" />
+                    {/* Upload indicator */}
+                    <div className="absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-10 flex items-center justify-center transition-all">
+                      <span className="text-xs text-primary-700 opacity-0 group-hover:opacity-100 font-medium">Upload</span>
+                    </div>
+                    {/* Pi Network Verified Badge */}
+                    <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
+                      <Shield className="w-3 h-3 text-white" />
+                    </div>
                   </div>
                   {profile.userType === 'FREELANCER' && profile.stats?.averageRating && (
                     <div className="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-lg">
@@ -199,7 +213,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Basic Info */}
-                <div className="space-y-2">
+                <div className="flex-1 space-y-2 text-center sm:text-left min-w-0">
                   {editMode ? (
                     <div className="space-y-2">
                       <Input
@@ -233,259 +247,218 @@ export default function ProfilePage() {
                           {profile.profile.title}
                         </p>
                       )}
-                      <p className="text-sm text-primary-500">@{profile.username}</p>
+                      <div className="flex items-center space-x-2">
+                        <p className="text-sm text-primary-500">@{profile.username}</p>
+                        <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 rounded-full">
+                          <Shield className="w-3 h-3 text-green-600" />
+                          <span className="text-xs font-medium text-green-700">Pi Pioneer</span>
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
 
                 {/* Quick Stats for Freelancers */}
                 {profile.userType === 'FREELANCER' && profile.stats && (
-                  <div className="flex items-center justify-center space-x-6 text-center">
-                    <div>
+                  <div className="flex flex-col sm:flex-row items-center sm:items-stretch justify-center sm:justify-end space-y-3 sm:space-y-0 sm:space-x-6 text-center w-full sm:w-auto">
+                    <div className="flex-1 sm:flex-none">
                       <div className="text-lg font-bold text-primary-900">{profile.stats.completedJobs}</div>
                       <div className="text-xs text-primary-600">Jobs</div>
                     </div>
-                    <div className="w-px h-8 bg-primary-200"></div>
-                    <div>
-                      <div className="text-lg font-bold text-green-600">π{profile.stats.totalEarnings?.toFixed(0) || 0}</div>
+                    <div className="hidden sm:block w-px h-8 bg-primary-200"></div>
+                    <div className="flex-1 sm:flex-none">
+                      <div className="text-lg font-bold text-primary-900">π{profile.stats.totalEarnings}</div>
                       <div className="text-xs text-primary-600">Earned</div>
                     </div>
-                    <div className="w-px h-8 bg-primary-200"></div>
-                    <div>
-                      <div className="text-lg font-bold text-primary-900">{profile.stats.successRate}%</div>
-                      <div className="text-xs text-primary-600">Success</div>
-                    </div>
                   </div>
                 )}
+              </div>
 
-                {editMode && (
-                  <div className="flex space-x-2 pt-4">
-                    <Button onClick={handleSaveProfile}>
-                      Save Changes
-                    </Button>
-                    <Button variant="outline" onClick={() => setEditMode(false)}>
-                      Cancel
-                    </Button>
+              {/* Bio Section */}
+              <div className="px-4 sm:px-6 pb-4 sm:pb-6">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-primary-900">About</h3>
+                    {!editMode && (
+                      <button
+                        onClick={() => setEditMode(true)}
+                        className="text-xs text-primary-600 hover:text-primary-900 transition-colors"
+                      >
+                        Edit
+                      </button>
+                    )}
                   </div>
-                )}
+                  {editMode ? (
+                    <div className="space-y-3">
+                      <textarea
+                        value={profile.bio || ''}
+                        onChange={(e) => setProfile({...profile, bio: e.target.value})}
+                        placeholder="Tell others about yourself, your skills, and what makes you unique..."
+                        className="w-full p-3 border border-primary-300 rounded-lg resize-none h-24 text-sm focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 transition-all"
+                        maxLength={300}
+                      />
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-primary-500">
+                          {(profile.bio || '').length}/300 characters
+                        </span>
+                        <div className="flex space-x-2">
+                          <Button onClick={saveProfile} size="sm">
+                            Save
+                          </Button>
+                          <Button variant="outline" onClick={() => setEditMode(false)} size="sm">
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div 
+                      onClick={() => setEditMode(true)}
+                      className="min-h-[3rem] p-3 rounded-lg border border-primary-200 hover:border-primary-300 cursor-pointer transition-colors group"
+                    >
+                      <p className="text-sm text-primary-700 leading-relaxed">
+                        {profile.bio || (
+                          <span className="text-primary-500 italic">
+                            Click to add a bio and tell others about yourself...
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Card>
         </motion.div>
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-primary-100 rounded-xl p-1">
-          {[
-            { key: 'overview', label: 'Overview', icon: User },
-            { key: 'portfolio', label: 'Work', icon: Briefcase },
-            { key: 'reviews', label: 'Reviews', icon: Star},
-            { key: 'settings', label: 'Settings', icon: Settings }
-          ].map((tab) => {
-            const IconComponent = tab.icon
-            return (
+        <div className="overflow-x-auto">
+          <div className="flex space-x-1 bg-primary-100 rounded-xl p-1 min-w-max">
+            {[
+              { key: 'overview', label: 'Overview', icon: User },
+              { key: 'portfolio', label: 'Work', icon: Briefcase },
+              { key: 'reviews', label: 'Reviews', icon: Star},
+              { key: 'settings', label: 'Settings', icon: Settings }
+            ].map((tab) => {
+              const IconComponent = tab.icon
+              return (
                 <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key as 'overview' | 'portfolio' | 'reviews' | 'settings')}
-                className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  activeTab === tab.key
-                  ? 'bg-white text-primary-900 shadow-sm'
-                  : 'text-primary-600 hover:text-primary-900'
-                }`}
+                  key={tab.key}
+                  onClick={() => setActiveTab(tab.key as 'overview' | 'portfolio' | 'reviews' | 'settings')}
+                  className={`flex-shrink-0 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeTab === tab.key
+                      ? 'bg-white text-primary-900 shadow-sm'
+                      : 'text-primary-600 hover:text-primary-900'
+                  }`}
                 >
-                <IconComponent className="w-4 h-4" />
-                <span>{tab.label}</span>
+                  <IconComponent className="w-4 h-4" />
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </button>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
 
         {/* Tab Content */}
         <motion.div
           key={activeTab}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.2 }}
           className="space-y-4"
         >
           {activeTab === 'overview' && (
-            <>
-              {/* Bio */}
-              <Card>
-                <h3 className="text-lg font-semibold text-primary-900 mb-3">About</h3>
-                {editMode ? (
-                  <textarea
-                    value={profile.bio || ''}
-                    onChange={(e) => setProfile({...profile, bio: e.target.value})}
-                    placeholder="Tell clients about yourself..."
-                    rows={4}
-                    className="w-full px-3 py-2 border border-primary-300 rounded-lg resize-none focus:ring-2 focus:ring-secondary-500 focus:border-transparent"
-                  />
-                ) : (
-                  <p className="text-primary-700 leading-relaxed">
-                    {profile.bio || 'No bio available. Add a bio to tell clients about yourself.'}
-                  </p>
-                )}
-              </Card>
+            <div className="space-y-4">
+              {/* Stats Cards */}
+              {profile.stats && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="text-center">
+                    <div className="space-y-2">
+                      <div className="text-2xl font-bold text-primary-900">{profile.stats.totalJobs}</div>
+                      <div className="text-xs text-primary-600">Total Projects</div>
+                    </div>
+                  </Card>
+                  <Card className="text-center">
+                    <div className="space-y-2">
+                      <div className="text-2xl font-bold text-green-600">π{profile.stats.totalEarnings}</div>
+                      <div className="text-xs text-primary-600">Total Earned</div>
+                    </div>
+                  </Card>
+                  <Card className="text-center">
+                    <div className="space-y-2">
+                      <div className="text-2xl font-bold text-yellow-600">{profile.stats.averageRating.toFixed(1)}</div>
+                      <div className="text-xs text-primary-600">Rating</div>
+                    </div>
+                  </Card>
+                  <Card className="text-center">
+                    <div className="space-y-2">
+                      <div className="text-2xl font-bold text-blue-600">{profile.stats.successRate}%</div>
+                      <div className="text-xs text-primary-600">Success Rate</div>
+                    </div>
+                  </Card>
+                </div>
+              )}
 
               {/* Contact Info */}
               <Card>
-                <h3 className="text-lg font-semibold text-primary-900 mb-3">Contact Information</h3>
+                <h3 className="font-semibold text-primary-900 mb-4">Contact Information</h3>
                 <div className="space-y-3">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-                      <User className="w-4 h-4 text-primary-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-primary-900">{profile.email}</div>
-                      <div className="text-xs text-primary-600">Email</div>
-                    </div>
+                    <User className="w-4 h-4 text-primary-500" />
+                    <span className="text-sm text-primary-700">{profile.email}</span>
                   </div>
-
                   {profile.location && (
                     <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-                        <MapPin className="w-4 h-4 text-primary-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-primary-900">{profile.location}</div>
-                        <div className="text-xs text-primary-600">Location</div>
-                      </div>
+                      <MapPin className="w-4 h-4 text-primary-500" />
+                      <span className="text-sm text-primary-700">{profile.location}</span>
                     </div>
                   )}
-
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-primary-100 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-primary-600" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-primary-900">
-                        Member since {new Date(profile.createdAt).toLocaleDateString()}
-                      </div>
-                      <div className="text-xs text-primary-600">Join Date</div>
-                    </div>
+                    <Calendar className="w-4 h-4 text-primary-500" />
+                    <span className="text-sm text-primary-700">
+                      Member since {new Date(profile.createdAt).getFullYear()}
+                    </span>
                   </div>
                 </div>
               </Card>
-
-              {/* Skills for Freelancers */}
-              {profile.userType === 'FREELANCER' && profile.skills && profile.skills.length > 0 && (
-                <Card>
-                  <h3 className="text-lg font-semibold text-primary-900 mb-3">Skills</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {profile.skills.map((skill) => (
-                      <span
-                        key={skill.id}
-                        className={`px-3 py-1 rounded-full text-sm font-medium border ${
-                          skill.level === 'EXPERT' 
-                            ? 'bg-secondary-100 text-secondary-800 border-secondary-300'
-                            : skill.level === 'ADVANCED'
-                            ? 'bg-primary-100 text-primary-800 border-primary-300'
-                            : skill.level === 'INTERMEDIATE'
-                            ? 'bg-green-100 text-green-800 border-green-300'
-                            : 'bg-primary-100 text-primary-800 border-primary-300'
-                        }`}
-                      >
-                        {skill.name}
-                      </span>
-                    ))}
-                  </div>
-                </Card>
-              )}
-
-              {/* Hourly Rate for Freelancers */}
-              {profile.userType === 'FREELANCER' && profile.profile?.hourlyRate && (
-                <Card>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-primary-900">Hourly Rate</h3>
-                      <p className="text-sm text-primary-600">Your standard rate</p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">
-                        π{profile.profile.hourlyRate}/hr
-                      </div>
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </>
+            </div>
           )}
 
           {activeTab === 'portfolio' && (
-            <Card className="text-center py-12">
-              <Briefcase className="w-12 h-12 mx-auto text-primary-400 mb-4" />
-              <h3 className="text-lg font-medium text-primary-900 mb-2">Portfolio Coming Soon</h3>
-              <p className="text-primary-600 mb-4">
-                Showcase your best work to attract clients
-              </p>
-              <Button variant="outline">
-                Add Portfolio Items
-              </Button>
+            <Card>
+              <h3 className="font-semibold text-primary-900 mb-4">Portfolio</h3>
+              <div className="text-center py-8">
+                <Briefcase className="w-12 h-12 text-primary-400 mx-auto mb-3" />
+                <p className="text-primary-600 mb-4">No portfolio items yet</p>
+                <Button size="sm">Add Portfolio Item</Button>
+              </div>
             </Card>
           )}
 
           {activeTab === 'reviews' && (
-            <Card className="text-center py-12">
-              <Star className="w-12 h-12 mx-auto text-primary-400 mb-4" />
-              <h3 className="text-lg font-medium text-primary-900 mb-2">
-                {profile.userType === 'FREELANCER' ? 'No reviews yet' : 'Reviews you\'ve given'}
-              </h3>
-              <p className="text-primary-600">
-                {profile.userType === 'FREELANCER' 
-                  ? 'Reviews will appear here after completing jobs'
-                  : 'Your reviews for freelancers will appear here'
-                }
-              </p>
+            <Card>
+              <h3 className="font-semibold text-primary-900 mb-4">Reviews</h3>
+              <div className="text-center py-8">
+                <Star className="w-12 h-12 text-primary-400 mx-auto mb-3" />
+                <p className="text-primary-600 mb-4">No reviews yet</p>
+                <p className="text-sm text-primary-500">Complete your first project to receive reviews</p>
+              </div>
             </Card>
           )}
 
           {activeTab === 'settings' && (
             <div className="space-y-4">
               <Card>
-                <h3 className="text-lg font-semibold text-primary-900 mb-4">Account Settings</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-primary-900">Email Notifications</div>
-                      <div className="text-sm text-primary-600">Receive updates about your jobs</div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" defaultChecked />
-                      <div className="w-11 h-6 bg-primary-200 peer-focus:ring-4 peer-focus:ring-secondary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-primary-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary-600"></div>
-                    </label>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-primary-900">SMS Notifications</div>
-                      <div className="text-sm text-primary-600">Get notified via text message</div>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" />
-                      <div className="w-11 h-6 bg-primary-200 peer-focus:ring-4 peer-focus:ring-secondary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-primary-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary-600"></div>
-                    </label>
-                  </div>
-                </div>
-              </Card>
-
-              <Card>
-                <h3 className="text-lg font-semibold text-primary-900 mb-4">Privacy</h3>
-                <div className="space-y-4">
-                  <Button variant="outline" className="w-full text-left justify-start">
-                    Change Password
+                <h3 className="font-semibold text-primary-900 mb-4">Account Settings</h3>
+                <div className="space-y-3">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Edit Profile
                   </Button>
-                  <Button variant="outline" className="w-full text-left justify-start">
-                    Two-Factor Authentication
+                  <Button variant="outline" className="w-full justify-start">
+                    <Shield className="w-4 h-4 mr-2" />
+                    Privacy Settings
                   </Button>
-                  <Button variant="outline" className="w-full text-left justify-start">
-                    Download My Data
-                  </Button>
-                </div>
-              </Card>
-
-              <Card>
-                <div className="space-y-4">
-                  <Button variant="outline" className="w-full text-red-600 border-red-300 hover:bg-red-50">
+                  <Button variant="outline" className="w-full justify-start text-red-600 hover:text-red-700">
                     Deactivate Account
                   </Button>
                 </div>

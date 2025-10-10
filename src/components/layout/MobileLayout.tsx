@@ -10,9 +10,12 @@ import {
   FileText,
   Wallet,
   Menu,
-  X
+  X,
+  BarChart3
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import NotificationBell from '@/components/ui/NotificationBell'
+import LanguageSelector from '@/components/ui/LanguageSelector'
 
 interface MobileLayoutProps {
   children: ReactNode
@@ -20,9 +23,10 @@ interface MobileLayoutProps {
 
 const navigation = [
   { name: 'Home', href: '/', icon: Home },
-  { name: 'Dashboard', href: '/dashboard', icon: Home },
+  { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Browse Jobs', href: '/jobs', icon: Search },
   { name: 'My Proposals', href: '/proposals', icon: FileText },
+  { name: 'Wallet', href: '/wallet', icon: Wallet },
   { name: 'Profile', href: '/profile', icon: User },
 ]
 
@@ -46,9 +50,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
             Lenno
           </Link>
           
-          <Link href="/wallet" className="p-2 text-primary-600 hover:text-primary-900">
-            <Wallet className="w-6 h-6" />
-          </Link>
+          <NotificationBell />
         </div>
       </header>
 
@@ -80,6 +82,11 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
               )
             })}
           </nav>
+          
+          {/* Language Selector - Bottom of Sidebar */}
+          <div className="px-4 pb-4">
+            <LanguageSelector />
+          </div>
         </div>
       </aside>
 
@@ -127,6 +134,11 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
                   </Link>
                 )
               })}
+              
+              {/* Language Selector in Mobile Menu */}
+              <div className="px-0">
+                <LanguageSelector />
+              </div>
             </nav>
           </motion.div>
         </div>

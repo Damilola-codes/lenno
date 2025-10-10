@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react'
+"use client"
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { 
   FileText,
@@ -38,36 +39,65 @@ interface Proposal {
 
 export default function ProposalsPage() {
   const [proposals, setProposals] = useState<Proposal[]>([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [userType] = useState<'CLIENT' | 'FREELANCER'>('FREELANCER') // This would come from auth context
+  const [hasInitialized, setHasInitialized] = useState(false)
 
-  useEffect(() => {
-    fetchProposals()
-  })
+  // Remove problematic useEffect - no automatic API calls
 
   const fetchProposals = async () => {
     try {
       setLoading(true)
+      setError(null)
       const queryParams = new URLSearchParams({
         ...(filter !== 'all' && { status: filter.toUpperCase() }),
         ...(searchQuery && { search: searchQuery })
       })
 
       const response = await fetch(`/api/proposals?${queryParams}`)
+      
+      if (response.status === 401) {
+        setError('Authentication required. Please sign in to view proposals.')
+        setProposals([])
+        return
+      }
+      
+      if (response.status === 403) {
+        setError('You do not have permission to view proposals.')
+        setProposals([])
+        return
+      }
+      
       const data = await response.json()
       
       if (response.ok) {
         setProposals(data.proposals || [])
+        setHasInitialized(true)
       } else {
-        console.error('Failed to fetch proposals:', data.error)
+        setError(data.error || `Failed to load proposals (${response.status})`)
+        setProposals([])
       }
     } catch (error) {
       console.error('Error fetching proposals:', error)
+      setError('Network error. Please check your connection and try again.')
+      setProposals([])
     } finally {
       setLoading(false)
     }
+  }
+
+  // Manual search function
+  const handleSearch = () => {
+    fetchProposals()
+  }
+
+  // Manual filter change function
+  const handleFilterChange = (newFilter: 'all' | 'pending' | 'accepted' | 'rejected') => {
+    setFilter(newFilter)
+    // Don't automatically fetch - let user click search/refresh
   }
 
   const handleAcceptProposal = async (proposalId: string) => {
@@ -153,14 +183,36 @@ export default function ProposalsPage() {
               placeholder={`Search ${userType === 'CLIENT' ? 'freelancers' : 'jobs'}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleSearch()
+                }
+              }}
               icon={<Search className="w-4 h-4" />}
             />
             <Button
               variant="outline"
-              onClick={fetchProposals}
+              onClick={handleSearch}
+              disabled={loading}
             >
-              <Search className="w-4 h-4" />
+              {loading ? (
+                <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Search className="w-4 h-4" />
+              )}
             </Button>
+            {!hasInitialized && (
+              <Button
+                onClick={() => {
+                  setSearchQuery('')
+                  setFilter('all')
+                  fetchProposals()
+                }}
+                disabled={loading}
+              >
+                Load Proposals
+              </Button>
+            )}
           </div>
         </div>
 
@@ -174,7 +226,7 @@ export default function ProposalsPage() {
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setFilter(tab.key as 'all' | 'pending' | 'accepted' | 'rejected')}
+              onClick={() => handleFilterChange(tab.key as 'all' | 'pending' | 'accepted' | 'rejected')}
               className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               filter === tab.key
                 ? 'bg-white text-primary-900 shadow-sm'
@@ -235,6 +287,43 @@ export default function ProposalsPage() {
                 </Card>
               ))}
             </div>
+          ) : error ? (
+            <Card className="border-red-200 bg-red-50">
+              <div className="text-center py-12">
+                <div className="text-red-500 mb-4">
+                  <FileText className="w-12 h-12 mx-auto" />
+                </div>
+                <h3 className="text-lg font-medium text-red-900 mb-2">
+                  {error === 'Unauthorized' ? 'Please sign in to view proposals' : 'Unable to load proposals'}
+                </h3>
+                <p className="text-red-600 mb-4">
+                  {error === 'Unauthorized' 
+                    ? 'You need to be signed in to access your proposals.'
+                    : error === 'Forbidden'
+                      ? 'You don\'t have permission to view these proposals.'
+                      : 'There was an error loading the proposals. Please try again.'
+                  }
+                </p>
+                {error === 'Unauthorized' ? (
+                  <Button
+                    onClick={() => window.location.href = '/auth/signup'}
+                    variant="outline"
+                  >
+                    Sign In
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      setError(null)
+                      fetchProposals()
+                    }}
+                    variant="outline"
+                  >
+                    Try Again
+                  </Button>
+                )}
+              </div>
+            </Card>
           ) : filteredProposals.length > 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
