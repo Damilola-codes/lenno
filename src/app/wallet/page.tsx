@@ -18,7 +18,8 @@ import {
 import MobileLayout from '@/components/layout/MobileLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { PiAuth, PiUser } from '@/library/auth'
+import PiPaymentFlow from '@/components/payments/PiPaymentFlow'
+import { PiAuth } from '@/library/auth'
 
 interface Transaction {
   id: string
@@ -30,6 +31,13 @@ interface Transaction {
   from?: string
   to?: string
   jobId?: string
+}
+
+interface PiUser {
+  id: string
+  username: string
+  email: string
+  userType: 'CLIENT' | 'FREELANCER'
 }
 
 interface WalletStats {
@@ -48,6 +56,7 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true)
   const [showBalance, setShowBalance] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'rewards'>('overview')
+  const [showPaymentFlow, setShowPaymentFlow] = useState(false)
 
   useEffect(() => {
     const user = PiAuth.getCurrentUser()
@@ -133,6 +142,32 @@ export default function WalletPage() {
     // You could add a toast notification here
   }
 
+  const handleSendPi = () => {
+    setShowPaymentFlow(true)
+  }
+
+  const handlePaymentComplete = (success: boolean, txid?: string) => {
+    setShowPaymentFlow(false)
+    if (success && txid) {
+      // Refresh wallet data
+      fetchWalletData()
+      // You could show a success toast here
+    }
+  }
+
+  const handlePaymentCancel = () => {
+    setShowPaymentFlow(false)
+  }
+
+  const fetchWalletData = async () => {
+    // Refresh user's wallet stats and transactions
+    // This would typically make API calls to get fresh data
+    if (currentUser) {
+      // Mock refresh - in real app would fetch from API
+      setStats(prev => prev ? { ...prev, balance: prev.balance - 10 } : null)
+    }
+  }
+
   if (loading) {
     return (
       <MobileLayout>
@@ -169,32 +204,34 @@ export default function WalletPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <Card className="bg-gradient-to-r from-secondary-600 to-secondary-500 text-white border-0">
+          <Card className="bg-gradient-to-br from-primary-50 to-secondary-50 border border-primary-200">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <span className="text-lg font-bold">π</span>
-                  <span className="text-sm opacity-90">Pi Network</span>
+                  <div className="w-8 h-8 bg-secondary-500 rounded-full flex items-center justify-center">
+                    <span className="text-lg font-bold text-white">π</span>
+                  </div>
+                  <span className="text-sm text-primary-700 font-medium">Pi Network</span>
                 </div>
                 <button
                   onClick={() => setShowBalance(!showBalance)}
-                  className="p-1 hover:bg-white/10 rounded"
+                  className="p-2 hover:bg-primary-100 rounded-lg transition-colors"
                 >
-                  {showBalance ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  {showBalance ? <EyeOff className="w-5 h-5 text-primary-600" /> : <Eye className="w-5 h-5 text-primary-600" />}
                 </button>
               </div>
               
               <div>
-                <p className="text-sm opacity-90">Available Balance</p>
-                <p className="text-3xl font-bold">
+                <p className="text-sm text-primary-600">Available Balance</p>
+                <p className="text-3xl font-bold text-primary-900">
                   {showBalance ? `π${stats?.balance?.toFixed(2)}` : 'π•••••'}
                 </p>
               </div>
               
               {stats?.pendingBalance && stats.pendingBalance > 0 && (
-                <div className="bg-white/10 rounded-lg p-3">
-                  <p className="text-xs opacity-90">Pending</p>
-                  <p className="text-lg font-semibold">
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <p className="text-xs text-yellow-700">Pending</p>
+                  <p className="text-lg font-semibold text-yellow-800">
                     {showBalance ? `π${stats.pendingBalance.toFixed(2)}` : 'π•••••'}
                   </p>
                 </div>
@@ -205,11 +242,11 @@ export default function WalletPage() {
                   onClick={copyWalletAddress}
                   className="flex items-center space-x-1 text-sm opacity-90 hover:opacity-100"
                 >
-                  <span>pi1{currentUser?.id?.slice(0, 8)}...{currentUser?.id?.slice(-8)}</span>
-                  <Copy className="w-4 h-4" />
+                  <span className="text-primary-700">pi1{currentUser?.id?.slice(0, 8)}...{currentUser?.id?.slice(-8)}</span>
+                  <Copy className="w-4 h-4 text-primary-600" />
                 </button>
-                <button className="p-1 hover:bg-white/10 rounded">
-                  <ExternalLink className="w-4 h-4" />
+                <button className="p-2 hover:bg-primary-100 rounded-lg transition-colors">
+                  <ExternalLink className="w-4 h-4 text-primary-600" />
                 </button>
               </div>
             </div>
@@ -218,11 +255,14 @@ export default function WalletPage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
-          <Button className="h-12 bg-gradient-to-r from-secondary-600 to-secondary-500 text-white">
+          <Button 
+            className="h-12 bg-secondary-600 hover:bg-secondary-700 text-white"
+            onClick={handleSendPi}
+          >
             <Send className="w-4 h-4 mr-2" />
             Send Pi
           </Button>
-          <Button variant="outline" className="h-12">
+          <Button variant="outline" className="h-12 border-secondary-600 text-secondary-700 hover:bg-secondary-50">
             <ArrowDownLeft className="w-4 h-4 mr-2" />
             Request Pi
           </Button>
@@ -386,7 +426,7 @@ export default function WalletPage() {
             <Card className="bg-gradient-to-r from-accent-50 to-warning-50 border-accent-200">
               <div className="text-center space-y-4">
                 <div className="w-16 h-16 bg-gradient-to-r from-accent-500 to-warning-500 rounded-full flex items-center justify-center mx-auto">
-                  <Star className="w-8 h-8 text-white" />
+                  <Star className="w-8 h-8 text-yellow-100" />
                 </div>
                 <div>
                   <h3 className="text-lg font-bold text-primary-900">Pioneer Level {stats?.level}</h3>
@@ -434,7 +474,7 @@ export default function WalletPage() {
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       achievement.unlocked ? 'bg-green-600' : 'bg-gray-400'
                     }`}>
-                      <Star className="w-4 h-4 text-white" />
+                      <Star className={`w-4 h-4 ${achievement.unlocked ? 'text-green-100' : 'text-gray-200'}`} />
                     </div>
                     <div className="flex-1">
                       <p className={`text-sm font-medium ${
@@ -454,6 +494,17 @@ export default function WalletPage() {
           </motion.div>
         )}
       </div>
+      
+      {/* Payment Flow Modal */}
+      {showPaymentFlow && (
+        <PiPaymentFlow
+          amount={10} // Default send amount
+          memo={`Send Pi via Lenno Wallet`}
+          onComplete={handlePaymentComplete}
+          onCancel={handlePaymentCancel}
+          type="fee"
+        />
+      )}
     </MobileLayout>
   )
 }

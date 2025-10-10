@@ -170,7 +170,7 @@ export default function ProfilePage() {
 
   return (
     <MobileLayout>
-      <div className="px-4 py-6 space-y-6">
+      <div className="px-3 sm:px-4 py-4 sm:py-6 space-y-4 sm:space-y-6 max-w-4xl mx-auto">
         {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -345,14 +345,14 @@ export default function ProfilePage() {
                 <button
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as 'overview' | 'portfolio' | 'reviews' | 'settings')}
-                  className={`flex-shrink-0 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                  className={`flex-shrink-0 flex items-center justify-center space-x-1 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     activeTab === tab.key
                       ? 'bg-white text-primary-900 shadow-sm'
                       : 'text-primary-600 hover:text-primary-900'
                   }`}
                 >
                   <IconComponent className="w-4 h-4" />
-                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="hidden sm:inline text-xs sm:text-sm">{tab.label}</span>
                 </button>
               )
             })}

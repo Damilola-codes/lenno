@@ -1,7 +1,6 @@
 // app/api/reviews/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/library/auth";
+import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
 import { z } from "zod";
 
@@ -15,7 +14,7 @@ const createReviewSchema = z.object({
 // POST /api/reviews - Create a review
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

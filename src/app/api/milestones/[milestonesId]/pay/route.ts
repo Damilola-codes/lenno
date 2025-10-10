@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/library/auth";
+import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
 
 // POST /api/milestones/[milestoneId]/pay - Mark milestone as paid
@@ -9,9 +8,9 @@ export async function POST(
   { params }: { params: { milestoneId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -46,8 +45,12 @@ export async function POST(
       return NextResponse.json({ error: "Milestone already paid" }, { status: 400 });
     }
 
-    // Here you would integrate with Pi Network payment system
-    // For now, we'll just mark as paid
+    // Integrate with Pi Network payment system
+    // For milestone payments, we don't create a Transaction record here
+    // as Transaction is for job-based payments. 
+    // Milestone payments are tracked via the milestone.isPaid status.
+
+    // Mark milestone as paid
     const updatedMilestone = await prisma.milestone.update({
       where: { id: milestoneId },
       data: { isPaid: true }

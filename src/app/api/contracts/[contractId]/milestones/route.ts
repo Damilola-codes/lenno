@@ -1,7 +1,6 @@
 // app/api/contracts/[contractId]/milestones/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/library/auth";
+import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
 import { z } from "zod";
 
@@ -18,9 +17,9 @@ export async function POST(
   { params }: { params: { contractId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -76,9 +75,9 @@ export async function GET(
   { params }: { params: { contractId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 

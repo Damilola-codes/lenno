@@ -1,7 +1,6 @@
 // app/api/milestones/[milestoneId]/complete/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/library/auth";
+import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
 
 // POST /api/milestones/[milestoneId]/complete - Mark milestone as completed
@@ -10,9 +9,9 @@ export async function POST(
   { params }: { params: { milestoneId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession();
     
-    if (!session) {
+    if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
