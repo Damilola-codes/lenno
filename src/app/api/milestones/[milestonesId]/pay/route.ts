@@ -2,18 +2,20 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
 
-// POST /api/milestones/[milestoneId]/pay - Mark milestone as paid
+// POST /api/milestones/[milestonesId]/pay - Mark milestone as paid
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ milestoneId: string }> }
+  { params }: { params: Promise<{ milestonesId: string }> }
 ) {
   try {
-    const { milestoneId } = await params
+    const { milestonesId } = await params
     const session = await getServerSession();
     
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const milestoneId = milestonesId;
 
     const milestone = await prisma.milestone.findUnique({
       where: { id: milestoneId },
