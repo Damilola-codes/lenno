@@ -3,10 +3,10 @@ import {prisma} from "@/library/prisma";
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { reviewId: string } }
+    { params }: { params: Promise<{ reviewId: string }> }
 ) {
     try {
-        const { reviewId } = params;
+        const { reviewId } = await params;
         
         // TODO: Implement review retrieval logic
         // Validate reviewId
@@ -42,10 +42,10 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { reviewId: string } }
+    { params }: { params: Promise<{ reviewId: string }> }
 ) {
     try {
-        const { reviewId } = params;
+        const { reviewId } = await params;
         const body = await request.json();
         
         // TODO: Implement review update logic
@@ -87,10 +87,10 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { reviewId: string } }
+    { params }: { params: Promise<{ reviewId: string }> }
 ) {
     try {
-        const { reviewId } = params;
+        const { reviewId } = await params;
         
         // TODO: Implement review deletion logic
         // Validate reviewId

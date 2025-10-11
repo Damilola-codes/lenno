@@ -3,10 +3,10 @@ import {prisma} from "@/library/prisma";
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { proposalId: string } }
+    { params }: { params: Promise<{ proposalId: string }> }
 ) {
     try {
-        const { proposalId } = params;
+        const { proposalId } = await params;
         // Validate proposal exists and can be rejected
         const proposal = await prisma.proposal.findUnique({
             where: { id: proposalId }

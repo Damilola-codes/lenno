@@ -16,10 +16,10 @@ const ProfileUpdateSchema = z.object({
 // GET /api/users/[userId]/profile - Get user profile
 export async function GET(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params
+    const { userId } = await params
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -59,10 +59,10 @@ export async function GET(
 // PUT /api/users/[userId]/profile - Update user profile
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params
+    const { userId } = await params
 
     if (!userId) {
       return NextResponse.json(
@@ -190,10 +190,10 @@ export async function PUT(
 // DELETE /api/users/[userId]/profile - Delete user profile (soft delete)
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params
+    const { userId } = await params
 
     if (!userId) {
       return NextResponse.json(
