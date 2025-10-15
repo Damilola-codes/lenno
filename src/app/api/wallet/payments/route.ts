@@ -1,25 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from '@/library/auth'
 import { z } from 'zod'
+import { prisma } from '@/library/prisma'
 
 const WalletPaymentSchema = z.object({
   amount: z.number().min(0.01),
   memo: z.string().min(1),
   type: z.enum(['job_payment', 'milestone_payment', 'bonus', 'tip', 'fee']),
-  jobId: z.string().optional()
+  jobId: z.string().optional(),
+  userId: z.string().min(1)
 })
 
 // POST /api/wallet/payments - Create wallet payment
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession()
-    
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
     const body = await req.json()
-    const { amount, memo, type, jobId } = WalletPaymentSchema.parse(body)
+    const { amount, memo, type, jobId, userId } = WalletPaymentSchema.parse(body)
+
+    // Verify user exists in database
+    const user = await prisma.user.findUnique({
+      where: { id: userId }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 401 })
+    }
     
     // Calculate platform fee (5% for wallet transactions)
     const platformFeeRate = 0.05
@@ -37,7 +41,7 @@ export async function POST(req: NextRequest) {
       memo,
       type,
       jobId,
-      userId: session.user.id,
+      userId: userId,
       status: 'pending',
       createdAt: new Date().toISOString(),
       metadata: {

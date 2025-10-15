@@ -54,7 +54,7 @@ export default function PiPaymentFlow({
   const [isProcessing, setIsProcessing] = useState(false)
   const [showCelebration, setShowCelebration] = useState(false)
   const [rewardPoints, setRewardPoints] = useState(0)
-  const [amount, setAmount] = useState(initialAmount || 0)
+  const [amount, setAmount] = useState('')
   const [feeBreakdown, setFeeBreakdown] = useState<{
     userAmount: number
     platformFee: number
@@ -107,6 +107,12 @@ export default function PiPaymentFlow({
     try {
       setIsProcessing(true)
       
+      // Get current user for authentication
+      const currentUser = (await import('@/library/auth')).PiAuth.getCurrentUser()
+      if (!currentUser) {
+        throw new Error('User not authenticated')
+      }
+      
       // Create payment record in backend
       const response = await fetch('/api/wallet/payments', {
         method: 'POST',
@@ -114,10 +120,11 @@ export default function PiPaymentFlow({
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          amount,
+          amount: parseFloat(amount) || (initialAmount || 0),
           memo,
           jobId,
-          type
+          type,
+          userId: currentUser.id
         })
       })
 
@@ -234,7 +241,7 @@ export default function PiPaymentFlow({
       updateStepStatus(3, 'completed')
       
       // Calculate reward points
-      const points = Math.floor(amount * 10) // 10 points per Pi
+      const points = Math.floor(parseFloat(amount) * 10) // 10 points per Pi
       setRewardPoints(points)
       
       // Show celebration
@@ -326,28 +333,28 @@ export default function PiPaymentFlow({
                       <input
                         type="number"
                         value={amount}
-                        onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                        onChange={(e) => setAmount(e.target.value)}
                         min="0.01"
                         step="0.01"
                         className="w-full px-4 py-3 border border-primary-300 rounded-lg focus:ring-2 focus:ring-secondary-500 focus:border-secondary-500 text-lg"
-                        placeholder="0.00"
+                        placeholder="Enter amount"
                       />
                       <span className="absolute right-3 top-3 text-lg font-semibold text-primary-600">π</span>
                     </div>
                   </div>
 
                   {/* Fee Breakdown Preview */}
-                  {amount > 0 && (
+                  {parseFloat(amount) > 0 && (
                     <div className="bg-primary-50 border border-primary-200 rounded-lg p-4">
                       <h3 className="text-sm font-medium text-primary-700 mb-3">Fee Breakdown</h3>
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-primary-600">Send Amount:</span>
-                          <span className="font-medium text-primary-900">π{amount.toFixed(2)}</span>
+                          <span className="font-medium text-primary-900">π{parseFloat(amount).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-primary-600">Platform Fee (5%):</span>
-                          <span className="font-medium text-primary-900">π{(amount * 0.05).toFixed(2)}</span>
+                          <span className="font-medium text-primary-900">π{(parseFloat(amount) * 0.05).toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-primary-600">Pi Network Fee:</span>
@@ -355,7 +362,7 @@ export default function PiPaymentFlow({
                         </div>
                         <div className="border-t border-primary-300 pt-2 flex justify-between">
                           <span className="font-medium text-primary-700">Total Cost:</span>
-                          <span className="font-bold text-secondary-600">π{(amount + (amount * 0.05) + 0.01).toFixed(2)}</span>
+                          <span className="font-bold text-secondary-600">π{(parseFloat(amount) + (parseFloat(amount) * 0.05) + 0.01).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -363,7 +370,7 @@ export default function PiPaymentFlow({
 
                   <Button
                     onClick={handleInitializePayment}
-                    disabled={amount <= 0 || isProcessing}
+                    disabled={!amount || parseFloat(amount) <= 0 || isProcessing}
                     className="w-full h-12 bg-secondary-600 hover:bg-secondary-700 text-white"
                   >
                     {isProcessing ? (
@@ -389,7 +396,7 @@ export default function PiPaymentFlow({
                   <span className="text-2xl font-bold text-white">π</span>
                 </div>
                 <h2 className="text-xl font-bold text-primary-900">Pi Network Payment</h2>
-                <p className="text-primary-600">Sending π{amount.toFixed(2)}</p>
+                <p className="text-primary-600">Sending π{parseFloat(amount).toFixed(2)}</p>
                 
                 {/* Fee Breakdown Display */}
                 {feeBreakdown && (
@@ -443,7 +450,7 @@ export default function PiPaymentFlow({
                 {type === 'job_payment' && (
                   <div className="flex items-center space-x-1 pt-2 border-t border-primary-200">
                     <Gift className="w-4 h-4 text-green-600" />
-                    <span className="text-xs text-green-700">+{Math.floor(amount * 10)} reward points</span>
+                    <span className="text-xs text-green-700">+{Math.floor(parseFloat(amount) * 10)} reward points</span>
                   </div>
                 )}
               </div>
