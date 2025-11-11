@@ -1,5 +1,4 @@
 // Simple client-side session management (generic auth)
-import { prisma } from './prisma'
 
 export interface UserProfile {
   id: string

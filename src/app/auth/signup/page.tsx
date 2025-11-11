@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Shield, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { Shield, AlertCircle, Loader2 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
@@ -89,9 +89,9 @@ export default function SignupPage() {
             </div>
             <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
 
-            <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2">
               <label className="text-sm">I am a</label>
-              <select value={userType} onChange={(e) => setUserType(e.target.value as any)} className="ml-2 rounded-md border px-2 py-1">
+              <select value={userType} onChange={(e) => setUserType(e.target.value as 'CLIENT' | 'FREELANCER')} className="ml-2 rounded-md border px-2 py-1">
                 <option value="FREELANCER">Freelancer</option>
                 <option value="CLIENT">Client</option>
               </select>

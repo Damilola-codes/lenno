@@ -141,14 +141,7 @@ export default function WalletPage() {
     // You could add a toast notification here
   }
 
-  const fetchWalletData = async () => {
-    // Refresh user's wallet stats and transactions
-    // This would typically make API calls to get fresh data
-    if (currentUser) {
-      // Mock refresh - in real app would fetch from API
-      setStats(prev => prev ? { ...prev, balance: prev.balance - 10 } : null)
-    }
-  }
+  // Note: wallet refresh logic removed for now (use API endpoints in future)
 
   if (loading) {
     return (

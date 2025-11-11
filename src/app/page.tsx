@@ -9,7 +9,7 @@ import {
   Shield,
   ArrowRight,
   Globe,
-  Sparkles,
+  
   Rocket,
   Lock,
   Zap,
@@ -129,7 +129,7 @@ export default function HomePage() {
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary-900 mb-6 leading-tight">
               Where Talent Meets{' '}
-              <span className="bg-gradient-to-r from-secondary-600 to-info-600 bg-clip-text text-transparent">
+              <span className="text-teal-700 font-semibold">
                 Tomorrow&apos;s Currency
               </span>
             </h1>
