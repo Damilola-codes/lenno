@@ -143,6 +143,16 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
+  /* Prevent mobile browsers (notably iOS Safari) from zooming inputs when focused
+     by ensuring form controls have a minimum readable font-size on small screens. */
+  input,
+  textarea,
+  select,
+  button {
+    -webkit-text-size-adjust: 100%;
+    font-size: 16px; /* prevents iOS zoom on focus when font-size < 16px */
+  }
+
   /* Keyframe definitions for custom animations */
   @keyframes fadeUp {
     0% {
