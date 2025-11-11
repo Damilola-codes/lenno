@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { 
   Wallet,
@@ -18,6 +18,7 @@ import {
 import MobileLayout from '@/components/layout/MobileLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
+import Input from '@/components/ui/Input'
 import { Auth } from '@/library/auth'
 
 interface Transaction {
@@ -55,6 +56,14 @@ export default function WalletPage() {
   const [loading, setLoading] = useState(true)
   const [showBalance, setShowBalance] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'rewards'>('overview')
+  const [showSendForm, setShowSendForm] = useState(false)
+  const [showReceiveForm, setShowReceiveForm] = useState(false)
+  const [sendAmount, setSendAmount] = useState<string>('')
+  const [sendTo, setSendTo] = useState<string>('')
+  const [receiveAmount, setReceiveAmount] = useState<string>('')
+  const [receiveFrom, setReceiveFrom] = useState<string>('')
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [modalContent, setModalContent] = useState<{ title: string; message: string } | null>(null)
   // Payment flow removed
 
   useEffect(() => {
@@ -64,50 +73,48 @@ export default function WalletPage() {
       return
     }
     setCurrentUser(user)
-    
-    // Mock data for beta
-    setTimeout(() => {
-      setStats({
-        balance: 847.25,
-        pendingBalance: 120.50,
-        totalEarned: 2340.75,
-        totalSpent: 1493.50,
-        rewardPoints: 1250,
-        level: 3
-      })
-      
-      setTransactions([
-        {
-          id: '1',
-          type: 'received',
-          amount: 150.00,
-          description: 'Payment for Logo Design Project',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          status: 'completed',
-          from: '@client_user',
-          jobId: 'job_123'
-        },
-        {
-          id: '2',
-          type: 'reward',
-          amount: 25.00,
-          description: 'First Project Completion Bonus',
-          timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-          status: 'completed'
-        },
-        {
-          id: '3',
-          type: 'received',
-          amount: 75.50,
-          description: 'Milestone Payment - Website Phase 1',
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          status: 'pending',
-          from: '@startup_client'
-        }
-      ])
-      
+    // Try to load persisted wallet state for this user
+    const statsKey = `wallet_stats_${user.id}`
+    const txKey = `wallet_transactions_${user.id}`
+
+    try {
+      const rawStats = typeof window !== 'undefined' ? window.localStorage.getItem(statsKey) : null
+      const rawTx = typeof window !== 'undefined' ? window.localStorage.getItem(txKey) : null
+
+      if (rawStats) {
+        setStats(JSON.parse(rawStats) as WalletStats)
+      } else {
+        // baseline stats for new users
+        setStats({ balance: 0, pendingBalance: 0, totalEarned: 0, totalSpent: 0, rewardPoints: 0, level: 1 })
+      }
+
+      if (rawTx) {
+        setTransactions(JSON.parse(rawTx) as Transaction[])
+      } else {
+        // start with empty history for new users
+        setTransactions([])
+      }
+    } catch (err) {
+      // fallback to safe defaults
+      setStats({ balance: 0, pendingBalance: 0, totalEarned: 0, totalSpent: 0, rewardPoints: 0, level: 1 })
+      setTransactions([])
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
+  }, [])
+
+  const persistWallet = useCallback((userId: string | undefined, newStats: WalletStats | null, newTx: Transaction[]) => {
+    if (!userId) return
+    try {
+      const statsKey = `wallet_stats_${userId}`
+      const txKey = `wallet_transactions_${userId}`
+      if (newStats) window.localStorage.setItem(statsKey, JSON.stringify(newStats))
+      window.localStorage.setItem(txKey, JSON.stringify(newTx))
+    } catch (e) {
+      // ignore localStorage errors
+      // eslint-disable-next-line no-console
+      console.warn('Could not persist wallet state', e)
+    }
   }, [])
 
   const getTransactionIcon = (type: Transaction['type']) => {
@@ -197,7 +204,7 @@ export default function WalletPage() {
               <div>
                 <p className="text-sm text-primary-600">Available Balance</p>
                 <p className="text-3xl font-bold text-primary-900">
-                  {showBalance ? `{` + String("$") + `${stats?.balance?.toFixed(2)}` + `}` : '•••••'}
+                  {showBalance ? `$${stats?.balance?.toFixed(2)}` : '•••••'}
                 </p>
               </div>
               
@@ -205,7 +212,7 @@ export default function WalletPage() {
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <p className="text-xs text-yellow-700">Pending</p>
                   <p className="text-lg font-semibold text-yellow-800">
-                    {showBalance ? `{` + String("$") + `${stats.pendingBalance.toFixed(2)}` + `}` : '•••••'}
+                    {showBalance ? `$${stats?.pendingBalance?.toFixed(2)}` : '•••••'}
                   </p>
                 </div>
               )}
@@ -225,15 +232,145 @@ export default function WalletPage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
-          <Button className="h-12 bg-secondary-600 hover:bg-secondary-700 text-white">
+          <Button type="button" onClick={() => { setShowSendForm(true); setActiveTab('transactions') }} className="h-12 bg-secondary-600 hover:bg-secondary-700 text-white">
             <Send className="w-4 h-4 mr-2" />
             Send
           </Button>
-          <Button variant="outline" className="h-12 border-secondary-600 text-secondary-700 hover:bg-secondary-50">
+          <Button type="button" variant="outline" onClick={() => { setShowReceiveForm(true); setActiveTab('transactions') }} className="h-12 border-secondary-600 text-secondary-700 hover:bg-secondary-50">
             <ArrowDownLeft className="w-4 h-4 mr-2" />
-            Request
+            Receive
           </Button>
         </div>
+
+        {/* Send / Receive Forms (local demo only) */}
+        {showSendForm && (
+          <Card>
+            <h3 className="font-semibold text-primary-900 mb-2">Send Funds</h3>
+            <div className="space-y-2">
+              <Input placeholder="Recipient (username or address)" value={sendTo} onChange={(e) => setSendTo(e.target.value)} />
+              <Input placeholder="Amount" value={sendAmount} onChange={(e) => setSendAmount(e.target.value)} />
+              <p className="text-xs text-primary-500">Enter a numeric value. Example: 12.50</p>
+              <div className="flex space-x-2">
+                <Button onClick={async () => {
+                  const amt = Number(sendAmount)
+                  // basic validations
+                  const isAmountValid = !Number.isNaN(amt) && amt > 0
+                  const emailLike = /@/.test(sendTo)
+                  const usernameLike = /^[a-zA-Z0-9_]{3,30}$/.test(sendTo)
+                  if (!isAmountValid) return
+                  if (!sendTo || (!emailLike && !usernameLike)) return
+                  // update balances locally
+                  setStats((s) => {
+                    const current = s || { balance: 0, pendingBalance: 0, totalEarned: 0, totalSpent: 0, rewardPoints: 0, level: 0 }
+                    const newBalance = Math.max(0, (current.balance || 0) - amt)
+                    return { ...current, balance: newBalance, totalSpent: (current.totalSpent || 0) + amt }
+                  })
+                  // add transaction
+                  const newTx: Transaction = {
+                    id: `tx_${Date.now()}`,
+                    type: 'sent',
+                    amount: amt,
+                    description: `Sent to ${sendTo}`,
+                    timestamp: new Date().toISOString(),
+                    status: 'completed',
+                    to: sendTo
+                  }
+                  setTransactions((t) => {
+                    const merged = [newTx, ...t]
+                    persistWallet(currentUser?.id, null, merged)
+                    return merged
+                  })
+                  // persist stats as well
+                  setStats((s) => {
+                    const updated = (s || { balance: 0, pendingBalance: 0, totalEarned: 0, totalSpent: 0, rewardPoints: 0, level: 0 })
+                    persistWallet(currentUser?.id, updated, [])
+                    return updated
+                  })
+                  // reset
+                  setSendAmount('')
+                  setSendTo('')
+                  setShowSendForm(false)
+                  setModalContent({ title: 'Sent', message: `You sent $${amt.toFixed(2)} to ${sendTo}` })
+                  setShowConfirmModal(true)
+                }} className="bg-secondary-600 text-white">Confirm</Button>
+                <Button variant="outline" onClick={() => setShowSendForm(false)}>Cancel</Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {showReceiveForm && (
+          <Card>
+            <h3 className="font-semibold text-primary-900 mb-2">Receive Funds</h3>
+            <div className="space-y-2">
+              <Input placeholder="Sender (username or address)" value={receiveFrom} onChange={(e) => setReceiveFrom(e.target.value)} />
+              <Input placeholder="Amount" value={receiveAmount} onChange={(e) => setReceiveAmount(e.target.value)} />
+              <p className="text-xs text-primary-500">Amounts must be numeric. Sender should be a username or email.</p>
+              <div className="flex space-x-2">
+                <Button onClick={() => {
+                  const amt = Number(receiveAmount)
+                  const isAmountValid = !Number.isNaN(amt) && amt > 0
+                  const emailLike = /@/.test(receiveFrom)
+                  const usernameLike = /^[a-zA-Z0-9_]{3,30}$/.test(receiveFrom)
+                  if (!isAmountValid) return
+                  if (!receiveFrom || (!emailLike && !usernameLike)) return
+                  setStats((s) => {
+                    const current = s || { balance: 0, pendingBalance: 0, totalEarned: 0, totalSpent: 0, rewardPoints: 0, level: 0 }
+                    const updated = { ...current, balance: (current.balance || 0) + amt, totalEarned: (current.totalEarned || 0) + amt }
+                    persistWallet(currentUser?.id, updated, transactions)
+                    return updated
+                  })
+                  const newTx: Transaction = {
+                    id: `tx_${Date.now()}`,
+                    type: 'received',
+                    amount: amt,
+                    description: `Received from ${receiveFrom}`,
+                    timestamp: new Date().toISOString(),
+                    status: 'completed',
+                    from: receiveFrom
+                  }
+                  setTransactions((t) => {
+                    const merged = [newTx, ...t]
+                    persistWallet(currentUser?.id, null, merged)
+                    return merged
+                  })
+                  setReceiveAmount('')
+                  setReceiveFrom('')
+                  setShowReceiveForm(false)
+                  setModalContent({ title: 'Received', message: `You received $${amt.toFixed(2)} from ${receiveFrom}` })
+                  setShowConfirmModal(true)
+                }} className="bg-secondary-600 text-white">Confirm</Button>
+                <Button variant="outline" onClick={() => setShowReceiveForm(false)}>Cancel</Button>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Confirmation Modal */}
+        {showConfirmModal && modalContent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setShowConfirmModal(false)} />
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6 z-10"
+            >
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                  <Gift className="w-6 h-6 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-primary-900">{modalContent.title}</h4>
+                  <p className="text-sm text-primary-600">{modalContent.message}</p>
+                </div>
+              </div>
+              <div className="mt-4 text-right">
+                <Button onClick={() => setShowConfirmModal(false)} className="px-4">Done</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex space-x-1 bg-primary-100 rounded-xl p-1">

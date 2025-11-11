@@ -150,7 +150,7 @@
   select,
   button {
     -webkit-text-size-adjust: 100%;
-    font-size: 20px; /* prevents iOS zoom on focus when font-size < 16px */
+    font-size: 10px; /* prevents iOS zoom on focus when font-size < 16px */
   }
 
   /* Keyframe definitions for custom animations */
