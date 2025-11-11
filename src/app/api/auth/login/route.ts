@@ -37,9 +37,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(safeUser)
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Login error:', error)
-    const msg = (error && (error as any).message) ? String((error as any).message) : ''
+    const msg = error instanceof Error ? error.message : String(error ?? '')
     if (msg.includes('Environment variable not found: DATABASE_URL') || msg.includes('PrismaClientInitializationError')) {
       return NextResponse.json({ error: 'Database not configured or unreachable. Ensure DATABASE_URL is set and the DB is running.' }, { status: 503 })
     }

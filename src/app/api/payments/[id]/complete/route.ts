@@ -13,8 +13,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-  // Request previously supplied an external txid; kept for compatibility but not stored
-  const { txid } = await req.json()
+  // Request body may include additional fields; we don't use external txid here
+  await req.json()
   const transactionId = id
 
     // Verify transaction belongs to user and is in escrow

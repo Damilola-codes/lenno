@@ -1,7 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/library/prisma'
+import { NextResponse } from 'next/server'
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   // This endpoint previously checked for an external network user id. Integration
   // has been removed — use /api/auth/register to create an account.
   return NextResponse.json({

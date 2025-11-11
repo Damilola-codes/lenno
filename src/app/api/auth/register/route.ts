@@ -68,15 +68,15 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(user, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
 
     // Log detailed error for debugging (safe in dev)
     console.error('Register route error:', error)
-    const msg = error?.message ?? ''
-    if (String(msg).includes('Environment variable not found: DATABASE_URL') || String(msg).includes('PrismaClientInitializationError')) {
+    const msg = error instanceof Error ? error.message : String(error ?? '')
+    if (msg.includes('Environment variable not found: DATABASE_URL') || msg.includes('PrismaClientInitializationError')) {
       return NextResponse.json({ error: 'Database not configured or unreachable. Ensure DATABASE_URL is set and the DB is running.' }, { status: 503 })
     }
 
