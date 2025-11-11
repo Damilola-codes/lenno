@@ -47,15 +47,17 @@ async function main() {
     'Cybersecurity', 'Quality Assurance', 'Testing'
   ];
 
-  const createdSkills = await Promise.all(
-    skills.map(skill => 
-      prisma.skill.upsert({
-        where: { name: skill },
-        update: {},
-        create: { name: skill }
-      })
-    )
-  );
+  // Upsert skills sequentially to avoid exhausting serverless DB connection pools
+  const createdSkills = [] as any[]
+  for (const skill of skills) {
+    // eslint-disable-next-line no-await-in-loop
+    const s = await prisma.skill.upsert({
+      where: { name: skill },
+      update: {},
+      create: { name: skill }
+    })
+    createdSkills.push(s)
+  }
 
   console.log(`✅ Created ${createdSkills.length} skills`)
   // Create test users
