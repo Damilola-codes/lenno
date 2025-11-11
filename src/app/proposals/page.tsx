@@ -203,18 +203,7 @@ export default function ProposalsPage() {
                 <Search className="w-4 h-4" />
               )}
             </Button>
-            {!hasInitialized && (
-              <Button
-                onClick={() => {
-                  setSearchQuery('')
-                  setFilter('all')
-                  fetchProposals()
-                }}
-                disabled={loading}
-              >
-                Load Proposals
-              </Button>
-            )}
+            {/* 'Load Proposals' button intentionally removed to avoid accidental bulk loads */}
           </div>
         </div>
 
@@ -296,15 +285,10 @@ export default function ProposalsPage() {
                   <FileText className="w-12 h-12 mx-auto" />
                 </div>
                 <h3 className="text-lg font-medium text-red-900 mb-2">
-                  {error === 'Unauthorized' ? 'Please sign in to view proposals' : 'Unable to load proposals'}
+                  {error === 'Unauthorized' ? 'Please sign in to view proposals' : 'Error loading proposals'}
                 </h3>
-                <p className="text-red-600 mb-4">
-                  {error === 'Unauthorized' 
-                    ? 'You need to be signed in to access your proposals.'
-                    : error === 'Forbidden'
-                      ? 'You don\'t have permission to view these proposals.'
-                      : 'There was an error loading the proposals. Please try again.'
-                  }
+                <p className="text-red-600 mb-4 break-words whitespace-pre-wrap">
+                  {error}
                 </p>
                 {error === 'Unauthorized' ? (
                   <Button
