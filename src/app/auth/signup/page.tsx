@@ -7,6 +7,7 @@ import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import { Auth } from '@/library/auth'
+import { normalizeApiError } from '@/library/utils'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -31,7 +32,7 @@ export default function SignupPage() {
 
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || 'Registration failed')
+        setError(normalizeApiError(data.error) || 'Registration failed')
         return
       }
 

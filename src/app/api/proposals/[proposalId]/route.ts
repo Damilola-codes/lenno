@@ -99,7 +99,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ prop
     const body = await req.json();
     const parsedBody = updateProposalSchema.safeParse(body);
     if (!parsedBody.success) {
-        return NextResponse.json({ error: "Invalid input", details: parsedBody.error.issues }, { status: 400 });
+        const message = parsedBody.error.issues.map((i: z.ZodIssue) => i.message).join('; ')
+        return NextResponse.json({ error: message, details: parsedBody.error.issues }, { status: 400 });
     }
     const updatedProposal = await prisma.proposal.update({
         where: { id: proposalId },

@@ -70,7 +70,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(user, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues }, { status: 400 });
+      const message = error.issues.map(i => i.message).join('; ')
+      return NextResponse.json({ error: message, details: error.issues }, { status: 400 });
     }
 
     // Log detailed error for debugging (safe in dev)

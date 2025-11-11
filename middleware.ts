@@ -145,13 +145,14 @@ export function validateRequest<T>(schema: z.ZodSchema<T>) {
       return schema.parse(body)
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
-        return NextResponse.json(
-          { 
-            error: 'Validation failed',
-            issues: error.issues
-          },
-          { status: 400 }
-        )
+          const message = error.issues.map((i: any) => i.message).join('; ')
+          return NextResponse.json(
+            {
+              error: message,
+              details: error.issues
+            },
+            { status: 400 }
+          )
       }
       
       return NextResponse.json(

@@ -39,3 +39,37 @@ export function truncateText(text: string, length: number = 100) {
   if (text.length <= length) return text
   return text.slice(0, length) + '...'
 }
+
+export function normalizeApiError(error: unknown): string {
+  if (!error) return ''
+  if (typeof error === 'string') return error
+  if (Array.isArray(error)) {
+    return error
+      .map((e) => {
+        if (e && typeof e === 'object' && 'message' in e) {
+          const msg = (e as Record<string, unknown>).message
+          if (typeof msg === 'string') return msg
+        }
+        return JSON.stringify(e)
+      })
+      .join('; ')
+  }
+  if (typeof error === 'object') {
+    const e = error as Record<string, unknown>
+    if (typeof e.message === 'string' && e.message) return e.message
+    if (typeof e.error === 'string') return e.error
+    if (e.details && Array.isArray(e.details)) {
+      return (e.details as unknown[])
+        .map((d) => {
+          if (d && typeof d === 'object' && 'message' in d) {
+            const msg = (d as Record<string, unknown>).message
+            if (typeof msg === 'string') return msg
+          }
+          return JSON.stringify(d)
+        })
+        .join('; ')
+    }
+    return JSON.stringify(error)
+  }
+  return String(error)
+}

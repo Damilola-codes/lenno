@@ -170,10 +170,11 @@ export async function PUT(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
+      const message = error.issues.map((i: z.ZodIssue) => i.message).join('; ')
       return NextResponse.json(
-        { 
-          error: 'Validation failed',
-          issues: error.issues
+        {
+          error: message,
+          details: error.issues
         },
         { status: 400 }
       )

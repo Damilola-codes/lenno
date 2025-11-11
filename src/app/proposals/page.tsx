@@ -72,12 +72,14 @@ export default function ProposalsPage() {
       }
       
       const data = await response.json()
-      
+
       if (response.ok) {
         setProposals(data.proposals || [])
         setHasInitialized(true)
       } else {
-        setError(data.error || `Failed to load proposals (${response.status})`)
+        // normalize error shape so UI always receives a string
+        const { normalizeApiError } = await import('@/library/utils')
+        setError(normalizeApiError(data.error) || `Failed to load proposals (${response.status})`)
         setProposals([])
       }
     } catch (error) {
