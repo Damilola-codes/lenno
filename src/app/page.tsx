@@ -19,55 +19,27 @@ import {
 } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
-import PiDebugInfo from '@/components/debug/PiDebugInfo'
+// SDK and debug removed — homepage is now generic
 
 export default function HomePage() {
   const router = useRouter()
-  const [piUser, setPiUser] = useState<{ uid: string; username: string } | null>(null)
+  const [savedUser, setSavedUser] = useState<{ uid: string; username: string } | null>(null)
 
   useEffect(() => {
-    // Check for existing user in localStorage
-    const savedUser = localStorage.getItem('piUser')
-    if (savedUser) {
+    // Check for existing authenticated user in localStorage
+    const item = localStorage.getItem('auth-user')
+    if (item) {
       try {
-        setPiUser(JSON.parse(savedUser))
-      } catch (error) {
-        console.error('Error parsing saved user:', error)
-        localStorage.removeItem('piUser')
-      }
-    }
-
-    // Load Pi SDK
-    const script = document.createElement('script')
-    script.src = 'https://sdk.minepi.com/pi-sdk.js'
-    script.onload = () => {
-      if (window.Pi) {
-        // Explicitly force sandbox mode for development
-        const sandboxMode = true // Always use sandbox during development
-        
-        console.log('Initializing Pi SDK with sandbox mode:', sandboxMode)
-        console.log('Current hostname:', window.location.hostname)
-        console.log('Environment:', process.env.NODE_ENV)
-        
-        window.Pi.init({ 
-          version: "2.0",
-          sandbox: sandboxMode
-        })
-        
-        console.log('Pi SDK initialized successfully in sandbox mode')
-      }
-    }
-    document.head.appendChild(script)
-
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script)
+        setSavedUser(JSON.parse(item))
+      } catch (err) {
+        console.error('Error parsing saved auth user:', err)
+        localStorage.removeItem('auth-user')
       }
     }
   }, [])
 
   const handleGetStarted = () => {
-    if (piUser) {
+    if (savedUser) {
       router.push('/dashboard')
     } else {
       router.push('/auth/signup')
@@ -79,14 +51,13 @@ export default function HomePage() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('piUser')
-    setPiUser(null)
+    localStorage.removeItem('auth-user')
+    setSavedUser(null)
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white">
-      {/* Debug Info - Development Only */}
-      <PiDebugInfo />
+  {/* Debug Info removed */}
       
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-primary-200">
@@ -94,7 +65,7 @@ export default function HomePage() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-gradient-to-r from-primary-900 to-secondary-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">π</span>
+                <span className="text-white font-bold text-lg">L</span>
               </div>
               <span className="text-xl font-bold text-primary-900">Lenno</span>
             </div>
@@ -107,10 +78,10 @@ export default function HomePage() {
               >
                 Browse Jobs
               </Button>
-              {piUser ? (
+              {savedUser ? (
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-600 hidden sm:block">
-                    Welcome, {piUser.username}
+                    Welcome, {savedUser.username}
                   </span>
                   <Button 
                     variant="outline"
@@ -153,22 +124,19 @@ export default function HomePage() {
             transition={{ duration: 0.6 }}
           >
             <div className="flex items-center justify-center space-x-2 mb-6">
-              <div className="bg-green-400 text-white px-4 py-2 rounded-full text-sm font-medium shadow-lg flex items-center space-x-2">
-                <Sparkles className="w-4 h-4" />
-                <span>Powered by Pi Network</span>
-              </div>
+              {/* Removed branding */}
             </div>
             
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-primary-900 mb-6 leading-tight">
               Where Talent Meets{' '}
-              <span className="bg-purple-600 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-secondary-600 to-info-600 bg-clip-text text-transparent">
                 Tomorrow&apos;s Currency
               </span>
             </h1>
             
             <p className="text-xl text-primary-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Lenno isn&apos;t just another freelance platform. We&apos;re building the future of work with Pi Network - 
-              where your skills directly convert to cryptocurrency that&apos;s already in millions of hands worldwide.
+              Lenno is a modern freelance marketplace built to help you find work and get paid quickly. 
+              We focus on fair fees, clear contracts, and fast payouts.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 max-w-3xl mx-auto text-sm">
@@ -176,25 +144,25 @@ export default function HomePage() {
                 <Rocket className="w-4 h-4 font-semibold" />
                 <span>Zero traditional fees</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 bg-warning-50 text-warning-800 px-4 py-2 rounded-lg border border-warning-200 hover:border-warning-300 transition-all duration-300">
+                <div className="flex items-center justify-center space-x-2 bg-warning-50 text-warning-800 px-4 py-2 rounded-lg border border-warning-200 hover:border-warning-300 transition-all duration-300">
                 <Lock className="w-4 h-4 font-semibold" />
-                <span>Pioneer-verified talent</span>
+                <span>Verified talent</span>
               </div>
-              <div className="flex items-center justify-center space-x-2 bg-info-50 text-info-800 px-4 py-2 rounded-lg border border-info-200 hover:border-info-300 transition-all duration-300">
+                <div className="flex items-center justify-center space-x-2 bg-info-50 text-info-800 px-4 py-2 rounded-lg border border-info-200 hover:border-info-300 transition-all duration-300">
                 <Zap className="w-4 h-4 font-semibold" />
-                <span>Instant Pi payments</span>
+                <span>Instant payouts</span>
               </div>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
+                <Button
                 variant="secondary"
                 size="lg"
                 onClick={handleGetStarted}
                 className="text-white hover:opacity-90 shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <Users className="w-5 h-5 mr-2" />
-                Start Earning Pi
+                Start Earning
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               
@@ -240,10 +208,9 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-gradient-to-br from-secondary-100 to-secondary-200 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Star className="w-6 h-6 text-secondary-600" />
               </div>
-              <h3 className="text-xl font-semibold text-primary-900 mb-3 text-center">Pioneer Ecosystem</h3>
+              <h3 className="text-xl font-semibold text-primary-900 mb-3 text-center">Global Community</h3>
               <p className="text-primary-600 text-center leading-relaxed">
-                Access 47+ million Pi Network pioneers worldwide. Your clients aren&apos;t just customers - 
-                they&apos;re fellow builders of the decentralized future.
+                Connect with a global community of professionals and businesses looking to hire skilled freelancers.
               </p>
             </motion.div>
 
@@ -273,10 +240,9 @@ export default function HomePage() {
                 <ShieldCheck className="w-6 h-6 text-info-600" />
               </div>
               <h3 className="text-xl font-semibold text-primary-900 mb-3 text-center">Trust & Security</h3>
-              <p className="text-primary-600 text-center leading-relaxed">
-                Every user is Pi-verified through KYC. No fake profiles, no payment disputes, 
-                no wondering if you&apos;ll get paid. Built on trust from day one.
-              </p>
+                <p className="text-primary-600 text-center leading-relaxed">
+                  We verify users to help reduce fraud and improve trust on the platform.
+                </p>
             </motion.div>
           </div>
         </div>
@@ -303,7 +269,7 @@ export default function HomePage() {
               className="text-center bg-gradient-to-br from-secondary-50 to-secondary-100 p-6 rounded-xl border border-secondary-200 hover:border-secondary-300 transition-all duration-300"
             >
               <div className="text-3xl font-bold text-secondary-700 mb-2">47M+</div>
-              <div className="text-sm font-medium text-secondary-800">Pi Network Pioneers</div>
+              <div className="text-sm font-medium text-secondary-800">Community Members</div>
               <div className="text-xs text-secondary-600 mt-1">Ready to hire & work</div>
             </motion.div>
             
@@ -373,8 +339,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-xl font-semibold mb-4 text-primary-900">Cryptocurrency-First</h3>
                 <p className="text-primary-600 leading-relaxed">
-                  Get paid in Pi - a cryptocurrency with 47+ million users and growing utility. 
-                  Your earnings appreciate as the ecosystem expands.
+                  Get paid quickly and securely. We support modern payout methods and aim to make withdrawals simple.
                 </p>
               </Card>
             </motion.div>
@@ -388,10 +353,9 @@ export default function HomePage() {
                 <div className="w-16 h-16 bg-gradient-to-br from-warning-100 to-warning-200 rounded-xl flex items-center justify-center mx-auto mb-6">
                   <Users className="w-8 h-8 text-warning-600" />
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-primary-900">Pioneer Community</h3>
-                <p className="text-primary-600 leading-relaxed">
-                  Connect with verified Pi pioneers who understand the value of decentralized work. 
-                  No fake accounts, no payment chargebacks.
+                <h3 className="text-xl font-semibold mb-4 text-primary-900">Community</h3>
+                  <p className="text-primary-600 leading-relaxed">
+                  Connect with verified professionals who value trust and clear agreements.
                 </p>
               </Card>
             </motion.div>
@@ -406,9 +370,8 @@ export default function HomePage() {
                   <Globe className="w-8 h-8 text-info-600" />
                 </div>
                 <h3 className="text-xl font-semibold mb-4 text-primary-900">Global & Instant</h3>
-                <p className="text-primary-600 leading-relaxed">
-                  Work with clients worldwide with instant Pi transactions. No waiting for bank transfers 
-                  or worrying about exchange rates.
+                  <p className="text-primary-600 leading-relaxed">
+                  Work with clients worldwide with faster payouts and fewer delays than traditional bank transfers.
                 </p>
               </Card>
             </motion.div>
@@ -425,18 +388,18 @@ export default function HomePage() {
             transition={{ delay: 0.9 }}
           >
             <h2 className="text-3xl font-bold mb-4">
-              Ready to Join the Pi Economy?
+              Ready to Join Lenno?
             </h2>
             <p className="text-primary-300 text-lg mb-8 max-w-2xl mx-auto">
               Whether you&apos;re a skilled freelancer or a client with ambitious projects, 
-              Lenno connects you with the Pi pioneer community that&apos;s building tomorrow.
+              Lenno connects you with professionals and businesses looking for quality work.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 onClick={handleGetStarted}
                 className="bg-white text-primary-900 hover:bg-primary-100 px-8 py-4 text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                Start Your Pi Journey
+                Get Started
                 <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
               <Button
@@ -453,17 +416,17 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-primary-900 text-white px-4 py-8">
         <div className="max-w-6xl mx-auto text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
+            <div className="flex items-center justify-center space-x-2 mb-4">
             <div className="w-6 h-6 bg-gradient-to-r from-secondary-500 to-secondary-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">π</span>
+              <span className="text-white font-bold text-sm">L</span>
             </div>
             <span className="text-lg font-semibold">Lenno</span>
           </div>
           <p className="text-primary-400 mb-4">
-            The first freelance marketplace powered by Pi Network
+            A modern freelance marketplace for professionals and businesses.
           </p>
           <div className="text-sm text-primary-500">
-            © 2025 Lenno. Built for Pi Network Pioneers.
+            © 2025 Lenno. All rights reserved.
           </div>
         </div>
       </footer>

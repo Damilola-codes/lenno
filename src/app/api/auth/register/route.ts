@@ -1,7 +1,7 @@
 // app/api/auth/register/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "../../../../library/prisma";
+import { prisma } from '@/library/prisma'
 import { z } from "zod";
 
 const registerSchema = z.object({
@@ -11,11 +11,15 @@ const registerSchema = z.object({
   lastName: z.string().min(1),
   username: z.string().min(3),
   userType: z.enum(["CLIENT", "FREELANCER"]),
-  piWalletId: z.string().optional()
+  // (Previously supported external wallet id; removed)
 });
 
 export async function POST(req: NextRequest) {
   try {
+    if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL is not set')
+      return NextResponse.json({ error: 'Database not configured. Please set DATABASE_URL in .env' }, { status: 503 })
+    }
     const body = await req.json();
     const validatedData = registerSchema.parse(body);
 
@@ -48,7 +52,6 @@ export async function POST(req: NextRequest) {
         lastName: validatedData.lastName,
         username: validatedData.username,
         userType: validatedData.userType,
-        piWalletId: validatedData.piWalletId,
         profile: {
           create: {}
         }
@@ -65,13 +68,19 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(user, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues }, { status: 400 });
     }
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+
+    // Log detailed error for debugging (safe in dev)
+    console.error('Register route error:', error)
+    const msg = error?.message ?? ''
+    if (String(msg).includes('Environment variable not found: DATABASE_URL') || String(msg).includes('PrismaClientInitializationError')) {
+      return NextResponse.json({ error: 'Database not configured or unreachable. Ensure DATABASE_URL is set and the DB is running.' }, { status: 503 })
+    }
+
+    const message = process.env.NODE_ENV === 'production' ? 'Internal server error' : msg || 'Internal server error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

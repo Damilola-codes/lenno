@@ -74,7 +74,6 @@ async function main() {
       username: 'johnclient',
       userType: 'CLIENT',
       isVerified: true,
-      piWalletId: 'pi_wallet_client_123',
       profile: {
         create: {
           title: 'Tech Startup Founder',
@@ -99,7 +98,6 @@ async function main() {
       username: 'janedev',
       userType: 'FREELANCER',
       isVerified: true,
-      piWalletId: 'pi_wallet_freelancer_456',
       profile: {
         create: {
           title: 'Full Stack Developer',
@@ -130,7 +128,6 @@ async function main() {
       username: 'mikedesign',
       userType: 'FREELANCER',
       isVerified: true,
-      piWalletId: 'pi_wallet_freelancer_789',
       profile: {
         create: {
           title: 'UI/UX Designer',

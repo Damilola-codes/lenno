@@ -1,7 +1,7 @@
 
 import { ReactNode } from 'react'
 import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils'
+import { cn } from '@/library/utils'
 
 interface CardProps {
   children: ReactNode

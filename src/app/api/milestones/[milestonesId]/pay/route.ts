@@ -46,8 +46,8 @@ export async function POST(
       return NextResponse.json({ error: "Milestone already paid" }, { status: 400 });
     }
 
-    // Integrate with Pi Network payment system
-    // For milestone payments, we don't create a Transaction record here
+  // Integrate with payment system (external integration removed)
+  // For milestone payments, we don't create a Transaction record here
     // as Transaction is for job-based payments. 
     // Milestone payments are tracked via the milestone.isPaid status.
 

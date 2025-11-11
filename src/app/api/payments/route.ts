@@ -8,15 +8,14 @@ const PLATFORM_FEE_RATE = 0.08; // 8%
 const TransactionSchema = z.object({
   jobId: z.string(),
   amount: z.number().min(1),
-  piTxHash: z.string().optional(),
   userId: z.string() // Add userId for authentication
 })
 
 // POST /api/payments - Create escrow transaction
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { jobId, amount, piTxHash, userId } = TransactionSchema.parse(body)
+  const body = await req.json()
+  const { jobId, amount, userId } = TransactionSchema.parse(body)
     
     if (!userId) {
       return NextResponse.json(
@@ -81,7 +80,6 @@ export async function POST(req: NextRequest) {
         amount,
         platformFee,
         netAmount,
-        piTxHash,
         status: 'ESCROW_HELD'
       }
     })

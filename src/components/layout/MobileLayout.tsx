@@ -13,7 +13,7 @@ import {
   X,
   BarChart3
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn } from '@/library/utils'
 import NotificationBell from '@/components/ui/NotificationBell'
 import LanguageSelector from '@/components/ui/LanguageSelector'
 
@@ -22,7 +22,6 @@ interface MobileLayoutProps {
 }
 
 const navigation = [
-  { name: 'Home', href: '/', icon: Home },
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Browse Jobs', href: '/jobs', icon: Search },
   { name: 'My Proposals', href: '/proposals', icon: FileText },
@@ -46,7 +45,7 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
             <Menu className="w-6 h-6" />
           </button>
           
-          <Link href="/" className="text-xl font-bold text-black">
+          <Link href="/dashboard" className="text-xl font-bold text-black">
             Lenno
           </Link>
           
@@ -57,8 +56,8 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-64 lg:flex-col">
         <div className="flex flex-col flex-grow bg-white border-r border-primary-200">
-          <div className="flex items-center flex-shrink-0 px-6 py-4">
-            <Link href="/" className="text-2xl font-bold text-black">
+            <div className="flex items-center flex-shrink-0 px-6 py-4">
+            <Link href="/dashboard" className="text-2xl font-bold text-black">
               Lenno
             </Link>
           </div>

@@ -1,7 +1,8 @@
-'use client'
+ 'use client'
 import { useState } from 'react'
 import { Bell, X, Check, AlertCircle, Info } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { formatCurrency } from '@/library/utils'
 
 interface Notification {
   id: string
@@ -19,7 +20,7 @@ export default function NotificationBell() {
       id: '1',
       type: 'success',
       title: 'Payment Received',
-      message: 'You received π150.00 for Logo Design Project',
+      message: `You received ${formatCurrency(150) } for Logo Design Project`,
       timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
       read: false
     },

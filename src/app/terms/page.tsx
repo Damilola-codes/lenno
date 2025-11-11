@@ -7,20 +7,19 @@ export default function TermsPage() {
         <div className="prose prose-gray max-w-none">
           <h2>1. Introduction</h2>
           <p>
-            Welcome to Lenno, the exclusive freelance marketplace for Pi Network pioneers. 
+            Welcome to Lenno, a modern freelance marketplace for professionals and businesses. 
             By accessing or using our platform, you agree to these Terms of Service.
           </p>
           
           <h2>2. Eligibility</h2>
           <p>
-            To use Lenno, you must be a verified Pi Network pioneer with an active Pi Network account. 
-            You must be at least 18 years old and legally capable of entering into contracts.
+            To use Lenno, you must be at least 18 years old and legally capable of entering into contracts.
           </p>
           
           <h2>3. Platform Purpose</h2>
           <p>
-            Lenno facilitates connections between clients and freelancers within the Pi Network ecosystem. 
-            All transactions are conducted using Pi cryptocurrency.
+            Lenno facilitates connections between clients and freelancers worldwide. 
+            Payments are processed using supported payout providers and payment methods.
           </p>
           
           <h2>4. User Responsibilities</h2>
@@ -28,19 +27,19 @@ export default function TermsPage() {
             <li>Maintain accurate and up-to-date profile information</li>
             <li>Deliver quality work as agreed upon in contracts</li>
             <li>Communicate professionally and respectfully</li>
-            <li>Comply with Pi Network community guidelines</li>
+            <li>Comply with community guidelines and applicable laws</li>
           </ul>
           
           <h2>5. Payment Terms</h2>
           <p>
-            All payments are processed through Pi Network&apos;s payment system. 
+            Payments are processed through supported payment providers. 
             Lenno charges an 8% platform fee on completed transactions.
           </p>
           
           <h2>6. Privacy and Security</h2>
           <p>
             We protect your personal information as outlined in our Privacy Policy. 
-            Your Pi Network credentials are never stored on our servers.
+            Credentials for third-party providers are not stored on our servers.
           </p>
           
           <h2>7. Dispute Resolution</h2>

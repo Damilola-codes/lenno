@@ -18,8 +18,7 @@ import {
 import MobileLayout from '@/components/layout/MobileLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import PiPaymentFlow from '@/components/payments/PiPaymentFlow'
-import { PiAuth } from '@/library/auth'
+import { Auth } from '@/library/auth'
 
 interface Transaction {
   id: string
@@ -33,7 +32,7 @@ interface Transaction {
   jobId?: string
 }
 
-interface PiUser {
+interface User {
   id: string
   username: string
   email: string
@@ -50,16 +49,16 @@ interface WalletStats {
 }
 
 export default function WalletPage() {
-  const [currentUser, setCurrentUser] = useState<PiUser | null>(null)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [stats, setStats] = useState<WalletStats | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [showBalance, setShowBalance] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'rewards'>('overview')
-  const [showPaymentFlow, setShowPaymentFlow] = useState(false)
+  // Payment flow removed
 
   useEffect(() => {
-    const user = PiAuth.getCurrentUser()
+    const user = Auth.getCurrentUser()
     if (!user) {
       window.location.href = '/auth/signup'
       return
@@ -137,26 +136,9 @@ export default function WalletPage() {
   }
 
   const copyWalletAddress = () => {
-    const mockAddress = `pi1${currentUser?.id?.slice(0, 8)}...${currentUser?.id?.slice(-8)}`
+    const mockAddress = `addr_${currentUser?.id?.slice(0, 8)}...${currentUser?.id?.slice(-8)}`
     navigator.clipboard.writeText(mockAddress)
     // You could add a toast notification here
-  }
-
-  const handleSendPi = () => {
-    setShowPaymentFlow(true)
-  }
-
-  const handlePaymentComplete = (success: boolean, txid?: string) => {
-    setShowPaymentFlow(false)
-    if (success && txid) {
-      // Refresh wallet data
-      fetchWalletData()
-      // You could show a success toast here
-    }
-  }
-
-  const handlePaymentCancel = () => {
-    setShowPaymentFlow(false)
   }
 
   const fetchWalletData = async () => {
@@ -191,10 +173,8 @@ export default function WalletPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-primary-900">Pi Wallet</h1>
-            <p className="text-sm text-primary-600 mt-1">
-              Manage your Pi Network earnings
-            </p>
+            <h1 className="text-2xl font-bold text-primary-900">Wallet</h1>
+            <p className="text-sm text-primary-600 mt-1">Manage your account balance</p>
           </div>
           <Wallet className="w-8 h-8 text-secondary-600" />
         </div>
@@ -209,9 +189,9 @@ export default function WalletPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <div className="w-8 h-8 bg-secondary-500 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-white">π</span>
+                    <span className="text-lg font-bold text-white">W</span>
                   </div>
-                  <span className="text-sm text-primary-700 font-medium">Pi Network</span>
+                  <span className="text-sm text-primary-700 font-medium">Wallet</span>
                 </div>
                 <button
                   onClick={() => setShowBalance(!showBalance)}
@@ -224,7 +204,7 @@ export default function WalletPage() {
               <div>
                 <p className="text-sm text-primary-600">Available Balance</p>
                 <p className="text-3xl font-bold text-primary-900">
-                  {showBalance ? `π${stats?.balance?.toFixed(2)}` : 'π•••••'}
+                  {showBalance ? `{` + String("$") + `${stats?.balance?.toFixed(2)}` + `}` : '•••••'}
                 </p>
               </div>
               
@@ -232,17 +212,14 @@ export default function WalletPage() {
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                   <p className="text-xs text-yellow-700">Pending</p>
                   <p className="text-lg font-semibold text-yellow-800">
-                    {showBalance ? `π${stats.pendingBalance.toFixed(2)}` : 'π•••••'}
+                    {showBalance ? `{` + String("$") + `${stats.pendingBalance.toFixed(2)}` + `}` : '•••••'}
                   </p>
                 </div>
               )}
               
               <div className="flex items-center justify-between pt-2">
-                <button
-                  onClick={copyWalletAddress}
-                  className="flex items-center space-x-1 text-sm opacity-90 hover:opacity-100"
-                >
-                  <span className="text-primary-700">pi1{currentUser?.id?.slice(0, 8)}...{currentUser?.id?.slice(-8)}</span>
+                <button onClick={copyWalletAddress} className="flex items-center space-x-1 text-sm opacity-90 hover:opacity-100">
+                  <span className="text-primary-700">addr_{currentUser?.id?.slice(0, 8)}...{currentUser?.id?.slice(-8)}</span>
                   <Copy className="w-4 h-4 text-primary-600" />
                 </button>
                 <button className="p-2 hover:bg-primary-100 rounded-lg transition-colors">
@@ -255,16 +232,13 @@ export default function WalletPage() {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-4">
-          <Button 
-            className="h-12 bg-secondary-600 hover:bg-secondary-700 text-white"
-            onClick={handleSendPi}
-          >
+          <Button className="h-12 bg-secondary-600 hover:bg-secondary-700 text-white">
             <Send className="w-4 h-4 mr-2" />
-            Send Pi
+            Send
           </Button>
           <Button variant="outline" className="h-12 border-secondary-600 text-secondary-700 hover:bg-secondary-50">
             <ArrowDownLeft className="w-4 h-4 mr-2" />
-            Request Pi
+            Request
           </Button>
         </div>
 
@@ -302,7 +276,7 @@ export default function WalletPage() {
                 <div className="space-y-2">
                   <TrendingUp className="w-6 h-6 text-green-600 mx-auto" />
                   <div className="text-lg font-bold text-primary-900">
-                    π{stats?.totalEarned?.toFixed(2)}
+                    ${stats?.totalEarned?.toFixed(2)}
                   </div>
                   <div className="text-xs text-primary-600">Total Earned</div>
                 </div>
@@ -312,7 +286,7 @@ export default function WalletPage() {
                 <div className="space-y-2">
                   <ArrowUpRight className="w-6 h-6 text-red-600 mx-auto" />
                   <div className="text-lg font-bold text-primary-900">
-                    π{stats?.totalSpent?.toFixed(2)}
+                    ${stats?.totalSpent?.toFixed(2)}
                   </div>
                   <div className="text-xs text-primary-600">Total Spent</div>
                 </div>
@@ -348,7 +322,7 @@ export default function WalletPage() {
                           ? 'text-green-600'
                           : 'text-red-600'
                       }`}>
-                        {tx.type === 'sent' ? '-' : '+'}π{tx.amount.toFixed(2)}
+                        {tx.type === 'sent' ? '-' : '+'}${tx.amount.toFixed(2)}
                       </p>
                       <p className={`text-xs ${
                         tx.status === 'completed' ? 'text-green-600' :
@@ -387,7 +361,7 @@ export default function WalletPage() {
                           ? 'text-green-600'
                           : 'text-red-600'
                       }`}>
-                        {tx.type === 'sent' ? '-' : '+'}π{tx.amount.toFixed(2)}
+                        {tx.type === 'sent' ? '-' : '+'}${tx.amount.toFixed(2)}
                       </p>
                     </div>
                     <div className="flex items-center justify-between">
@@ -425,13 +399,13 @@ export default function WalletPage() {
             {/* Gamification Level */}
             <Card className="bg-gradient-to-r from-accent-50 to-warning-50 border-accent-200">
               <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-accent-500 to-warning-500 rounded-full flex items-center justify-center mx-auto">
-                  <Star className="w-8 h-8 text-yellow-100" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-primary-900">Pioneer Level {stats?.level}</h3>
-                  <p className="text-sm text-primary-600">Earning Specialist</p>
-                </div>
+                  <div className="w-16 h-16 bg-gradient-to-r from-accent-500 to-warning-500 rounded-full flex items-center justify-center mx-auto">
+                    <Star className="w-8 h-8 text-yellow-100" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-primary-900">User Level {stats?.level}</h3>
+                    <p className="text-sm text-primary-600">Earning Specialist</p>
+                  </div>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span>Progress to Level {(stats?.level || 0) + 1}</span>
@@ -465,8 +439,8 @@ export default function WalletPage() {
               <div className="space-y-3">
                 {[
                   { title: 'First Milestone', description: 'Complete your first project', points: 100, unlocked: true },
-                  { title: 'Pi Earner', description: 'Earn your first 100 Pi', points: 200, unlocked: true },
-                  { title: 'Pioneer Pro', description: 'Complete 10 projects', points: 500, unlocked: false },
+                  { title: 'Top Earner', description: 'Earn your first 100 credits', points: 200, unlocked: true },
+                  { title: 'Pro Member', description: 'Complete 10 projects', points: 500, unlocked: false },
                 ].map((achievement, index) => (
                   <div key={index} className={`flex items-center space-x-3 p-3 rounded-lg ${
                     achievement.unlocked ? 'bg-green-50' : 'bg-gray-50'
@@ -495,17 +469,7 @@ export default function WalletPage() {
         )}
       </div>
       
-      {/* Payment Flow Modal */}
-      {showPaymentFlow && (
-        <PiPaymentFlow
-          initialAmount={10} // Default send amount
-          memo={`Send Pi via Lenno Wallet`}
-          onComplete={handlePaymentComplete}
-          onCancel={handlePaymentCancel}
-          type="fee"
-          allowAmountInput={true}
-        />
-      )}
+  {/* Payment flow removed. */}
     </MobileLayout>
   )
 }

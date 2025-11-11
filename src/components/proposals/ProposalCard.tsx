@@ -1,7 +1,7 @@
 import Button from '@/components/ui/Button'
 import Card from '@/components/ui/Card'
 import { Check, X, Clock, Wallet, User, Calendar, FileText } from 'lucide-react'
-import { formatCurrency, formatTimeAgo, truncateText } from '@/lib/utils'
+import { formatCurrency, formatTimeAgo, truncateText } from '@/library/utils'
 import Image from 'next/image'
 
 interface ProposalCardProps {
@@ -190,7 +190,7 @@ export default function ProposalCard({
 
       {/* Net Earnings Info */}
       {!isClient && (
-        <div className="bg-gradient-to-r from-pi-50 to-primary-50 p-3 rounded-xl">
+        <div className="bg-gradient-to-r from-secondary-50 to-primary-50 p-3 rounded-xl">
           <div className="text-xs space-y-1">
             <div className="flex justify-between">
               <span className="text-primary-600">Proposed Amount:</span>
@@ -200,7 +200,7 @@ export default function ProposalCard({
               <span className="text-primary-600">Platform Fee (8%):</span>
               <span>-{formatCurrency(proposal.proposedRate * 0.08)}</span>
             </div>
-            <div className="flex justify-between font-medium text-pi-600 pt-1 border-t border-primary-200">
+            <div className="flex justify-between font-medium text-secondary-700 pt-1 border-t border-primary-200">
               <span> You&apos;ll Receive: </span>
               <span>{formatCurrency(proposal.proposedRate * 0.92)}</span>
             </div>

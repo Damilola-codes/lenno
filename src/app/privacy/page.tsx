@@ -9,7 +9,7 @@ export default function PrivacyPage() {
           <h3>Personal Information</h3>
           <ul>
             <li>Email address (for account notifications and security)</li>
-            <li>Pi Network user ID (for authentication and payments)</li>
+              <li>User ID or account identifier (for authentication and payments)</li>
             <li>Profile information you choose to share</li>
             <li>Communication data within our platform</li>
           </ul>
@@ -38,7 +38,7 @@ export default function PrivacyPage() {
             <li>With your explicit consent</li>
             <li>To comply with legal requirements</li>
             <li>To protect our platform and users from fraud or abuse</li>
-            <li>In connection with Pi Network for payment processing</li>
+              <li>In connection with payment processors and payout providers as necessary</li>
           </ul>
           
           <h2>4. Data Security</h2>
@@ -48,15 +48,14 @@ export default function PrivacyPage() {
           <ul>
             <li>End-to-end encryption for sensitive communications</li>
             <li>Secure storage with regular security audits</li>
-            <li>No storage of Pi Network credentials</li>
+              <li>We do not store third-party payment provider credentials</li>
             <li>Regular security updates and monitoring</li>
           </ul>
           
-          <h2>5. Pi Network Integration</h2>
+          <h2>5. Payment Providers</h2>
           <p>
-            Our platform integrates with Pi Network for authentication and payments. 
-            We use Pi Network&apos;s official SDK and follow their security guidelines. 
-            Your Pi Network credentials remain under Pi Network&apos;s control.
+          Our platform integrates with third-party payment providers to process payouts and handle payment infrastructure. 
+          We do not collect or store credentials for those providers; they remain under the control of the provider.
           </p>
           
           <h2>6. Data Retention</h2>
@@ -87,8 +86,8 @@ export default function PrivacyPage() {
           
           <h2>9. International Users</h2>
           <p>
-            Our platform is designed for global Pi Network pioneers. 
-            Data may be processed in various countries where Pi Network operates.
+          Our platform is designed for global professionals and businesses. 
+          Data may be processed in various countries where our services operate.
           </p>
           
           <h2>10. Changes to This Policy</h2>

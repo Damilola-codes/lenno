@@ -13,8 +13,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { txid } = await req.json()
-    const transactionId = id
+  // Request previously supplied an external txid; kept for compatibility but not stored
+  const { txid } = await req.json()
+  const transactionId = id
 
     // Verify transaction belongs to user and is in escrow
     const transaction = await prisma.transaction.findFirst({
@@ -36,7 +37,6 @@ export async function PUT(
     const completedTransaction = await prisma.transaction.update({
       where: { id: transactionId },
       data: {
-        piTxHash: txid,
         status: 'COMPLETED'
       },
       include: {
@@ -50,7 +50,8 @@ export async function PUT(
     })
 
     // Award reward points based on transaction amount
-    const rewardPoints = Math.floor(transaction.amount * 5) // 5 points per Pi
+  // Reward points calculation (points per currency unit)
+  const rewardPoints = Math.floor(transaction.amount * 5)
 
     // If this is linked to a job, update job status to completed
     if (transaction.jobId) {

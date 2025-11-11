@@ -48,7 +48,6 @@ model User {
   firstName   String
   lastName    String
   userType    UserType  
-  piWalletId  String?
   isVerified  Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -193,7 +192,6 @@ model Transaction {
   platformFee  Float            // 8% of amount
   netAmount    Float            // amount - platformFee
   status       TransactionStatus @default(PENDING)
-  piTxHash     String?          // Pi Network transaction hash
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   

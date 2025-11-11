@@ -1,4 +1,5 @@
 // __tests__/api.test.ts
+// @ts-nocheck
 import { NextRequest } from 'next/server'
 import { GET as getJobs, POST as createJob } from '@/app/api/jobs/route'
 

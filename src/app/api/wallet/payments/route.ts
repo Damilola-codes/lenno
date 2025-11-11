@@ -25,19 +25,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 401 })
     }
     
-    // Calculate platform fee (5% for wallet transactions)
-    const platformFeeRate = 0.05
-    const platformFee = amount * platformFeeRate
-    const piNetworkFee = 0.01 // Pi Network's standard fee
-    const totalAmount = amount + platformFee + piNetworkFee
+  // Calculate platform fee (5% for wallet transactions)
+  const platformFeeRate = 0.05
+  const platformFee = amount * platformFeeRate
+  const networkFee = 0.01 // Network fee
+  const totalAmount = amount + platformFee + networkFee
 
-    // Create a payment record for Pi Network integration
+  // Create a payment record
     const payment = {
       id: `wallet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       amount: totalAmount,
       originalAmount: amount,
       platformFee,
-      piNetworkFee,
+      networkFee,
       memo,
       type,
       jobId,
@@ -47,22 +47,22 @@ export async function POST(req: NextRequest) {
       metadata: {
         originalAmount: amount,
         platformFee,
-        piNetworkFee,
+        networkFee,
         feeBreakdown: {
           userAmount: amount,
           platformFee: platformFee,
-          piNetworkFee: piNetworkFee,
+          networkFee: networkFee,
           totalAmount: totalAmount
         }
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       payment,
       feeBreakdown: {
         userAmount: amount,
         platformFee: platformFee,
-        piNetworkFee: piNetworkFee,
+        networkFee: networkFee,
         totalAmount: totalAmount
       }
     })

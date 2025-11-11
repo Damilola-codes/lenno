@@ -9,8 +9,8 @@ export async function GET(req: NextRequest) {
     const timeRange = searchParams.get('range') || 'month';
     const userId = searchParams.get('userId');
     
-    // For now, we'll use a demo user ID since NextAuth isn't fully set up for Pi Network
-    // In production, you'd get this from session or Pi Network token validation
+  // For now, we'll use a demo user ID since NextAuth isn't fully set up
+  // In production, you'd get this from session or a valid auth token
     if (!userId) {
       return NextResponse.json({ error: "User ID required" }, { status: 400 });
     }

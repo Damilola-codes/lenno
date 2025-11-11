@@ -13,8 +13,9 @@ export async function PUT(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { piPaymentId } = await req.json()
-    const transactionId = id
+  // POST body previously accepted a payment id tied to an external network; integration removed.
+  // We preserve the endpoint to mark the transaction approved.
+  const transactionId = id
 
     // Verify transaction belongs to user (either as client or freelancer)
     const transaction = await prisma.transaction.findFirst({
@@ -31,11 +32,11 @@ export async function PUT(
       return NextResponse.json({ error: 'Transaction not found' }, { status: 404 })
     }
 
-    // Update transaction with Pi payment hash and approve status
+    // Mark transaction as approved
     await prisma.transaction.update({
       where: { id: transactionId },
       data: {
-        piTxHash: piPaymentId,
+        // Use existing TransactionStatus enum value
         status: 'ESCROW_HELD'
       }
     })

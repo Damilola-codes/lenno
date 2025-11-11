@@ -5,8 +5,8 @@ import './globals.css'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Pi Network Jobs - Freelance Platform',
-  description: 'Find and offer services using Pi cryptocurrency',
+  title: 'Lenno - Freelance Platform',
+  description: 'Find and offer freelance services with fast payouts and clear contracts',
 }
 
 export default function RootLayout({

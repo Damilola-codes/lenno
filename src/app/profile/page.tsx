@@ -15,7 +15,8 @@ import MobileLayout from '@/components/layout/MobileLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import { PiAuth } from '@/library/auth'
+import { Auth } from '@/library/auth'
+import { formatCurrency } from '@/library/utils'
 
 interface UserProfile {
   id: string
@@ -77,7 +78,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'portfolio' | 'reviews' | 'settings'>('overview')
 
   useEffect(() => {
-    const user = PiAuth.getCurrentUser()
+    const user = Auth.getCurrentUser()
     if (!user) {
       window.location.href = '/auth/signup'
       return
@@ -90,22 +91,22 @@ export default function ProfilePage() {
       setLoading(true)
       
       // For beta, use mock data based on current user
-      const user = PiAuth.getCurrentUser()
-      if (!user) return
+  const user = Auth.getCurrentUser()
+  if (!user) return
       
       setTimeout(() => {
         setProfile({
           id: user.id,
-          firstName: user.username?.split('_')[0] || 'Pioneer',
+          firstName: user.username?.split('_')[0] || 'User',
           lastName: user.username?.split('_')[1] || 'User',
           username: user.username,
-          email: user.email || 'pioneer@pi.network',
+          email: user.email || 'user@example.com',
           userType: user.userType,
           createdAt: new Date().toISOString(),
-          location: 'Pi Network',
-          bio: `Verified Pi Network pioneer specializing in ${user.userType === 'FREELANCER' ? 'professional services' : 'project management'}`,
+          location: '',
+          bio: `Verified platform member specializing in ${user.userType === 'FREELANCER' ? 'professional services' : 'project management'}`,
           profile: {
-            title: user.userType === 'FREELANCER' ? 'Pi Network Freelancer' : 'Pi Network Client',
+            title: user.userType === 'FREELANCER' ? 'Freelancer' : 'Client',
             hourlyRate: user.userType === 'FREELANCER' ? 25 : undefined,
             availability: 'Available',
             experience: '2+ years in digital marketplace',
@@ -195,7 +196,7 @@ export default function ProfilePage() {
                     <div className="absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-10 flex items-center justify-center transition-all">
                       <span className="text-xs text-primary-700 opacity-0 group-hover:opacity-100 font-medium">Upload</span>
                     </div>
-                    {/* Pi Network Verified Badge */}
+                    {/* Verified Badge */}
                     <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
                       <Shield className="w-3 h-3 text-white" />
                     </div>
@@ -251,7 +252,7 @@ export default function ProfilePage() {
                         <p className="text-sm text-primary-500">@{profile.username}</p>
                         <div className="flex items-center space-x-1 px-2 py-1 bg-green-100 rounded-full">
                           <Shield className="w-3 h-3 text-green-600" />
-                          <span className="text-xs font-medium text-green-700">Pi Pioneer</span>
+                          <span className="text-xs font-medium text-green-700">Verified</span>
                         </div>
                       </div>
                     </>
@@ -267,7 +268,7 @@ export default function ProfilePage() {
                     </div>
                     <div className="hidden sm:block w-px h-8 bg-primary-200"></div>
                     <div className="flex-1 sm:flex-none">
-                      <div className="text-lg font-bold text-primary-900">π{profile.stats.totalEarnings}</div>
+                      <div className="text-lg font-bold text-primary-900">{formatCurrency(profile.stats.totalEarnings)}</div>
                       <div className="text-xs text-primary-600">Earned</div>
                     </div>
                   </div>
@@ -379,7 +380,7 @@ export default function ProfilePage() {
                   </Card>
                   <Card className="text-center">
                     <div className="space-y-2">
-                      <div className="text-2xl font-bold text-green-600">π{profile.stats.totalEarnings}</div>
+                      <div className="text-2xl font-bold text-green-600">{formatCurrency(profile.stats.totalEarnings)}</div>
                       <div className="text-xs text-primary-600">Total Earned</div>
                     </div>
                   </Card>

@@ -9,7 +9,7 @@ import {
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Card from '@/components/ui/Card'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency } from '@/library/utils'
 
 interface Proposal {
     id: string;
@@ -168,7 +168,7 @@ export default function ProposalForm({ job, onSubmit, onCancel }: ProposalFormPr
             {/* Rate & Duration */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <Input
-                label={`Proposed Rate (π) ${job.isHourly ? 'per hour' : 'total'} *`}
+                label={`Proposed Rate ($) ${job.isHourly ? 'per hour' : 'total'} *`}
                 type="number"
                 step="0.01"
                 value={formData.proposedRate}
@@ -225,7 +225,7 @@ export default function ProposalForm({ job, onSubmit, onCancel }: ProposalFormPr
                           onChange={(e) => updateMilestone(index, 'title', e.target.value)}
                         />
                         <Input
-                          placeholder="Amount (π)"
+                          placeholder="Amount ($)"
                           type="number"
                           step="0.01"
                           value={milestone.amount}
@@ -258,7 +258,7 @@ export default function ProposalForm({ job, onSubmit, onCancel }: ProposalFormPr
             </div>
 
             {/* Proposal Summary */}
-            <Card className="bg-gradient-to-r from-pi-50 to-primary-50">
+            <Card className="bg-gradient-to-r from-secondary-50 to-primary-50">
               <div className="space-y-2">
                 <h3 className="font-medium text-primary-900">Proposal Summary</h3>
                 <div className="text-sm space-y-1">
@@ -274,7 +274,7 @@ export default function ProposalForm({ job, onSubmit, onCancel }: ProposalFormPr
                   </div>
                   <div className="flex justify-between pt-2 border-t border-primary-200">
                     <span className="font-medium text-primary-900">You&apos;ll Receive:</span>
-                    <span className="font-bold text-pi-600">
+                    <span className="font-bold text-secondary-700">
                       {formatCurrency((parseFloat(formData.proposedRate) || 0) * 0.92)}
                     </span>
                   </div>

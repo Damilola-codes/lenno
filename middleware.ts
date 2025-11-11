@@ -2,11 +2,12 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 
-// Simple session verification for Pi Network users
-async function verifyPiSession(request: NextRequest) {
+// Simple session verification for app users
+async function verifySession(request: NextRequest) {
   try {
     // Check for session cookie or authorization header
-    const sessionCookie = request.cookies.get('pi-session')?.value
+    // renamed session cookie to a generic key now that Pi integration is removed
+    const sessionCookie = request.cookies.get('auth-session')?.value
     const authHeader = request.headers.get('authorization')
     
     if (!sessionCookie && !authHeader) {
@@ -14,11 +15,10 @@ async function verifyPiSession(request: NextRequest) {
     }
     
     // For client-side verification, we'll check if the session exists
-    // In a real implementation, you might verify the Pi Network token here
+    // In a real implementation, you might verify an auth token here
     return {
-      id: 'pi-user',
-      userType: 'FREELANCER', // This would come from your session
-      piWalletId: 'pi-wallet'
+      id: 'app-user',
+      userType: 'FREELANCER'
     }
   } catch (error) {
     console.error('Session verification error:', error)
@@ -44,7 +44,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const userSession = await verifyPiSession(request)
+  const userSession = await verifySession(request)
 
   // Protected API routes
   if (pathname.startsWith('/api/jobs') && request.method === 'POST') {
@@ -107,7 +107,7 @@ export const config = {
 }
 
 export async function authMiddleware(request: NextRequest) {
-  const userSession = await verifyPiSession(request)
+  const userSession = await verifySession(request)
 
   if (!userSession) {
     return NextResponse.json(

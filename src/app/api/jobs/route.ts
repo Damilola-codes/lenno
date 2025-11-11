@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { prisma } from "../../../library/prisma"
+import { prisma } from "@/library/prisma"
+import { getServerSession } from '@/library/auth'
 import { Prisma } from "@prisma/client"
 import { z } from "zod"
 
@@ -134,5 +135,33 @@ export async function GET(req: NextRequest) {
       { error: "Internal server error" },
       { status: 500 }
     )
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession()
+    const body = await req.json()
+    const { title, description, budget } = body || {}
+
+    if (!title || !description || typeof budget !== 'number') {
+      return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+    }
+
+    const clientId = session?.user?.id ?? 'demo-client-id'
+
+    const job = await prisma.job.create({
+      data: {
+        title,
+        description,
+        budget,
+        clientId
+      }
+    })
+
+    return NextResponse.json({ job }, { status: 201 })
+  } catch (error) {
+    console.error('Create job error:', error)
+    return NextResponse.json({ error: 'Failed to create job' }, { status: 500 })
   }
 }

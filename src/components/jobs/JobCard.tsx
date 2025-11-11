@@ -4,7 +4,7 @@ import {
     MapPin,
     Tag
 } from 'lucide-react'
-import { cn, formatCurrency, formatTimeAgo, truncateText } from '@/lib/utils'
+import { cn, formatCurrency, formatTimeAgo, truncateText } from '@/library/utils'
 import Card from '@/components/ui/Card'
 import Image from 'next/image'
 

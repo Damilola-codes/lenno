@@ -8,13 +8,14 @@ import {
   CheckCircle,
   Clock,
   User,
+  LogOut,
   TrendingUp,
   Calendar
 } from 'lucide-react'
 import MobileLayout from '@/components/layout/MobileLayout'
 import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
-import { PiAuth, PiUser } from '@/library/auth'
+import { Auth, type User as AuthUser } from '@/library/auth'
 
 interface DashboardStats {
   totalEarnings: number
@@ -44,7 +45,7 @@ export default function Dashboard() {
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [currentUser, setCurrentUser] = useState<PiUser | null>(null)
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null)
   const [timeRange, setTimeRange] = useState<TimeRange>('month')
 
   const fetchDashboardData = useCallback(async () => {
@@ -112,7 +113,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     // Check if user is authenticated
-    const user = PiAuth.getCurrentUser()
+    const user = Auth.getCurrentUser()
     if (!user) {
       // Redirect to auth if not authenticated
       window.location.href = '/auth/signup'
@@ -223,7 +224,7 @@ export default function Dashboard() {
           <div className="bg-gradient-to-r from-secondary-50 to-secondary-100 rounded-xl p-6 border border-secondary-200">
             <div className="flex items-center space-x-3 mb-3">
               <div className="w-12 h-12 bg-gradient-to-r from-secondary-600 to-secondary-500 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-xl">π</span>
+                <span className="text-white font-bold text-xl">{currentUser?.username?.[0]?.toUpperCase() ?? 'L'}</span>
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">
@@ -231,8 +232,8 @@ export default function Dashboard() {
                 </h2>
                 <p className="text-sm text-gray-600">
                   {currentUser?.userType === 'CLIENT' 
-                    ? 'Ready to find amazing Pi Network talent?' 
-                    : 'Ready to earn Pi with your skills?'
+                    ? 'Ready to find amazing talent?' 
+                    : 'Ready to earn with your skills?'
                   }
                 </p>
               </div>
@@ -293,16 +294,15 @@ export default function Dashboard() {
                   🚀 Welcome to Lenno Beta!
                 </h3>
                 <p className="text-sm text-gray-600 mb-3">
-                  You&apos;re among the first Pi Network pioneers to experience our freelance marketplace. 
-                  We&apos;re currently in beta testing phase, and your feedback is invaluable!
+                  You&apos;re among the first users to experience our freelance marketplace. We&apos;re currently in beta testing phase, and your feedback is invaluable!
                 </p>
                 <div className="bg-white rounded-lg p-4 border border-accent-200 mb-4">
                   <h4 className="font-medium text-gray-900 mb-2">What&apos;s Coming Soon:</h4>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Full Pi Network payment integration</li>
+                    <li>• Full payment integration</li>
                     <li>• Advanced matching algorithms</li>
                     <li>• Milestone-based project management</li>
-                    <li>• Pioneer reputation system</li>
+                    <li>• Reputation system</li>
                     <li>• Multi-language support</li>
                   </ul>
                 </div>
@@ -334,7 +334,16 @@ export default function Dashboard() {
                 {currentUser?.userType === 'CLIENT' ? 'Track your project performance' : 'Monitor your freelance progress'}
               </p>
             </div>
-            <BarChart3 className="w-8 h-8 text-primary-400" />
+            <div className="flex items-center space-x-3">
+              <BarChart3 className="w-8 h-8 text-primary-400" />
+              <button
+                onClick={() => Auth.signOut()}
+                aria-label="Sign out"
+                className="w-10 h-10 bg-green-600 rounded-md flex items-center justify-center text-white hover:bg-green-700"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
           {/* Time Range Selector */}
@@ -384,7 +393,7 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     <DollarSign className="w-8 h-8 text-green-600 mx-auto" />
                     <div className="text-2xl font-bold text-primary-900">
-                      π{stats?.totalEarnings?.toFixed(2) || '0.00'}
+                      {'$' + (stats?.totalEarnings?.toFixed(2) || '0.00')}
                     </div>
                     <div className="text-sm text-primary-600">Total Earnings</div>
                   </div>
@@ -400,7 +409,7 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     <Clock className="w-8 h-8 text-orange-600 mx-auto" />
                     <div className="text-2xl font-bold text-primary-900">
-                      π{stats?.pendingPayments?.toFixed(2) || '0.00'}
+                      {'$' + (stats?.pendingPayments?.toFixed(2) || '0.00')}
                     </div>
                     <div className="text-sm text-primary-600">Pending</div>
                   </div>
@@ -498,7 +507,7 @@ export default function Dashboard() {
                   <div className="space-y-2">
                     <DollarSign className="w-8 h-8 text-green-600 mx-auto" />
                     <div className="text-2xl font-bold text-primary-900">
-                      π{stats?.totalEarnings?.toFixed(2) || '0.00'}
+                      {'$' + (stats?.totalEarnings?.toFixed(2) || '0.00')}
                     </div>
                     <div className="text-sm text-primary-600">Spent</div>
                   </div>
@@ -527,11 +536,11 @@ export default function Dashboard() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-primary-600">This Week</span>
-                  <span className="font-semibold text-primary-900">π{stats?.weeklyEarnings?.toFixed(2) || '0.00'}</span>
+                  <span className="font-semibold text-primary-900">{'$' + (stats?.weeklyEarnings?.toFixed(2) || '0.00')}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-primary-600">This Month</span>
-                  <span className="font-semibold text-primary-900">π{stats?.monthlyEarnings?.toFixed(2) || '0.00'}</span>
+                  <span className="font-semibold text-primary-900">{'$' + (stats?.monthlyEarnings?.toFixed(2) || '0.00')}</span>
                 </div>
                 <div className="pt-2 border-t border-primary-200">
                   <div className="flex justify-between items-center">
@@ -576,7 +585,7 @@ export default function Dashboard() {
                         </p>
                         {activity.amount && (
                           <span className="text-sm font-semibold text-green-600">
-                            π{activity.amount.toFixed(2)}
+                            {'$' + activity.amount.toFixed(2)}
                           </span>
                         )}
                       </div>

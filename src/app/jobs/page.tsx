@@ -258,12 +258,12 @@ export default function JobsPage() {
               <div className="flex flex-wrap gap-2">
                 {filters.minBudget && (
                   <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg">
-                    Min: π{filters.minBudget}
+                    Min: ${filters.minBudget}
                   </span>
                 )}
                 {filters.maxBudget && (
                   <span className="px-2 py-1 bg-primary-100 text-primary-700 rounded-lg">
-                    Max: π{filters.maxBudget}
+                    Max: ${filters.maxBudget}
                   </span>
                 )}
                 {filters.jobType !== 'all' && (
@@ -290,7 +290,7 @@ export default function JobsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Input
-                  label="Min Budget (π)"
+                  label="Min Budget ($)"
                   type="number"
                   value={filters.minBudget}
                   onChange={(e) => handleMinBudgetChange(e.target.value)}
@@ -300,7 +300,7 @@ export default function JobsPage() {
               </div>
               <div>
                 <Input
-                  label="Max Budget (π)"
+                  label="Max Budget ($)"
                   type="number"
                   value={filters.maxBudget}
                   onChange={(e) => handleMaxBudgetChange(e.target.value)}
@@ -428,7 +428,7 @@ export default function JobsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Input
-                      label="Min Budget (π)"
+                      label="Min Budget ($)"
                       type="number"
                       value={filters.minBudget}
                       onChange={(e) => handleMinBudgetChange(e.target.value)}
@@ -438,7 +438,7 @@ export default function JobsPage() {
                   </div>
                   <div>
                     <Input
-                      label="Max Budget (π)"
+                      label="Max Budget ($)"
                       type="number"
                       value={filters.maxBudget}
                       onChange={(e) => handleMaxBudgetChange(e.target.value)}
