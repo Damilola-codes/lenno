@@ -131,8 +131,14 @@ export async function GET(req: NextRequest) {
       : 0;
 
     // Calculate totals
-    const totalAmount = trends.reduce((sum, trend) => sum + trend.amount, 0);
-    const totalCount = trends.reduce((sum, trend) => sum + trend.count, 0);
+    const totalAmount = trends.reduce(
+      (sum: number, trend: (typeof trends)[number]) => sum + trend.amount,
+      0,
+    );
+    const totalCount = trends.reduce(
+      (sum: number, trend: (typeof trends)[number]) => sum + trend.count,
+      0,
+    );
     const averageAmount = totalCount > 0 ? totalAmount / totalCount : 0;
 
     return NextResponse.json({

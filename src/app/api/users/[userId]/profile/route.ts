@@ -121,8 +121,8 @@ export async function PUT(
         where: { name: { in: skills } }
       })
 
-      const existingSkillNames = existingSkills.map(skill => skill.name)
-      const newSkills = skills.filter(skill => !existingSkillNames.includes(skill))
+      const existingSkillNames = existingSkills.map((skill: { id: string; name: string }) => skill.name)
+      const newSkills = skills.filter((skill: string) => !existingSkillNames.includes(skill))
 
       // Create new skills if they don't exist
       if (newSkills.length > 0) {
@@ -139,10 +139,10 @@ export async function PUT(
 
       // Update profile with skills connection
       updateData.profile.upsert.create.skills = {
-        connect: allSkills.map(skill => ({ id: skill.id }))
+        connect: allSkills.map((skill: { id: string; name: string }) => ({ id: skill.id }))
       }
       updateData.profile.upsert.update.skills = {
-        set: allSkills.map(skill => ({ id: skill.id }))
+        set: allSkills.map((skill: { id: string; name: string }) => ({ id: skill.id }))
       }
     }
 

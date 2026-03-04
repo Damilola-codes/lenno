@@ -1,6 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
+import Image from "next/image";
 import { useState } from "react";
 
 export default function HomeApplicationExperience() {
@@ -80,11 +81,15 @@ export default function HomeApplicationExperience() {
                       <div className="rounded-2xl bg-white border border-primary-200 p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3">
-                            <img
-                              src="https://i.pravatar.cc/80?img=32"
-                              alt="Amina profile"
-                              className="w-11 h-11 rounded-full object-cover border border-primary-200"
-                            />
+                            <div className="relative w-11 h-11 rounded-full overflow-hidden border border-primary-200">
+                              <Image
+                                src="https://i.pravatar.cc/80?img=32"
+                                alt="Amina profile"
+                                fill
+                                sizes="44px"
+                                className="object-cover"
+                              />
+                            </div>
                             <div>
                               <p className="font-semibold text-primary-900">
                                 Amina K. — Product Designer
@@ -105,11 +110,15 @@ export default function HomeApplicationExperience() {
                       <div className="rounded-2xl bg-white border border-primary-200 p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3">
-                            <img
-                              src="https://i.pravatar.cc/80?img=12"
-                              alt="Daniel profile"
-                              className="w-11 h-11 rounded-full object-cover border border-primary-200"
-                            />
+                            <div className="relative w-11 h-11 rounded-full overflow-hidden border border-primary-200">
+                              <Image
+                                src="https://i.pravatar.cc/80?img=12"
+                                alt="Daniel profile"
+                                fill
+                                sizes="44px"
+                                className="object-cover"
+                              />
+                            </div>
                             <div>
                               <p className="font-semibold text-primary-900">
                                 Daniel M. — UI/UX Specialist
@@ -130,11 +139,15 @@ export default function HomeApplicationExperience() {
                       <div className="rounded-2xl bg-white border border-primary-200 p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3">
-                            <img
-                              src="https://i.pravatar.cc/80?img=45"
-                              alt="Priya profile"
-                              className="w-11 h-11 rounded-full object-cover border border-primary-200"
-                            />
+                            <div className="relative w-11 h-11 rounded-full overflow-hidden border border-primary-200">
+                              <Image
+                                src="https://i.pravatar.cc/80?img=45"
+                                alt="Priya profile"
+                                fill
+                                sizes="44px"
+                                className="object-cover"
+                              />
+                            </div>
                             <div>
                               <p className="font-semibold text-primary-900">
                                 Priya S. — Frontend Developer
@@ -156,11 +169,15 @@ export default function HomeApplicationExperience() {
                       <div className="rounded-2xl bg-white border border-primary-200 p-4">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3">
-                            <img
-                              src="https://i.pravatar.cc/80?img=61"
-                              alt="Marco profile"
-                              className="w-11 h-11 rounded-full object-cover border border-primary-200"
-                            />
+                            <div className="relative w-11 h-11 rounded-full overflow-hidden border border-primary-200">
+                              <Image
+                                src="https://i.pravatar.cc/80?img=61"
+                                alt="Marco profile"
+                                fill
+                                sizes="44px"
+                                className="object-cover"
+                              />
+                            </div>
                             <div>
                               <p className="font-semibold text-primary-900">
                                 Marco T. — Product Strategist

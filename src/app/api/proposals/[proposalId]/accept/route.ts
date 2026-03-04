@@ -2,10 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
+import { Prisma } from "@prisma/client";
 
 // POST /api/proposals/[proposalId]/accept - Accept a proposal and create contract
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ proposalId: string }> }
 ) {
   try {
@@ -73,51 +74,51 @@ export async function POST(
         freelancer: FreelancerInfo;
     }
 
-    const result: ContractResult = await prisma.$transaction(async (tx) => {
-        // Accept the proposal
-        await tx.proposal.update({
-            where: { id: proposalId },
-            data: { status: "ACCEPTED" }
-        });
+    const result: ContractResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // Accept the proposal
+      await tx.proposal.update({
+        where: { id: proposalId },
+        data: { status: "ACCEPTED" }
+      });
 
-        // Reject all other proposals for this job
-        await tx.proposal.updateMany({
-            where: {
-                jobId: proposal.job.id,
-                id: { not: proposalId }
-            },
-            data: { status: "REJECTED" }
-        });
+      // Reject all other proposals for this job
+      await tx.proposal.updateMany({
+        where: {
+          jobId: proposal.job.id,
+          id: { not: proposalId }
+        },
+        data: { status: "REJECTED" }
+      });
 
-        // Update job status
-        await tx.job.update({
-            where: { id: proposal.job.id },
-            data: { status: "IN_PROGRESS" }
-        });
+      // Update job status
+      await tx.job.update({
+        where: { id: proposal.job.id },
+        data: { status: "IN_PROGRESS" }
+      });
 
-        // Create contract
-        const contract: ContractResult = await tx.contract.create({
-            data: {
-                jobId: proposal.job.id,
-                clientId: proposal.job.clientId,
-                freelancerId: proposal.freelancerId,
-                title: proposal.job.title,
-                description: proposal.job.description,
-                amount: proposal.proposedRate,
-                startDate: new Date()
-            },
-            include: {
-                freelancer: {
-                    select: {
-                        firstName: true,
-                        lastName: true,
-                        username: true
-                    }
-                }
+      // Create contract
+      const contract: ContractResult = await tx.contract.create({
+        data: {
+          jobId: proposal.job.id,
+          clientId: proposal.job.clientId,
+          freelancerId: proposal.freelancerId,
+          title: proposal.job.title,
+          description: proposal.job.description,
+          amount: proposal.proposedRate,
+          startDate: new Date()
+        },
+        include: {
+          freelancer: {
+            select: {
+              firstName: true,
+              lastName: true,
+              username: true
             }
-        });
+          }
+        }
+      });
 
-        return contract;
+      return contract;
     });
 
     return NextResponse.json(result);

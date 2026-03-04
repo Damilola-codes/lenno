@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/library/prisma'
 import { z } from 'zod'
-import { TransactionStatus } from '@prisma/client'
+
+type TransactionStatus =
+  | 'PENDING'
+  | 'ESCROW_HELD'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'DISPUTED'
 
 const PLATFORM_FEE_RATE = 0.08; // 8%
 
@@ -60,7 +66,9 @@ export async function POST(req: NextRequest) {
         { status: 403 }
       )
     }
-    const acceptedProposal = job.proposals.find(p => p.status === 'ACCEPTED')
+    const acceptedProposal = job.proposals.find(
+      (p: (typeof job.proposals)[number]) => p.status === 'ACCEPTED',
+    )
     
     if (!acceptedProposal) {
       return NextResponse.json(
@@ -138,12 +146,25 @@ export async function GET(req: NextRequest) {
       )
     }
 
+    const normalizedStatus = status?.toUpperCase() as TransactionStatus | undefined
+    const validStatuses: TransactionStatus[] = [
+      'PENDING',
+      'ESCROW_HELD',
+      'COMPLETED',
+      'CANCELLED',
+      'DISPUTED'
+    ]
+    const statusFilter =
+      normalizedStatus && validStatuses.includes(normalizedStatus)
+        ? normalizedStatus
+        : undefined
+
     const where = {
       OR: [
         { clientId: userId },
         { freelancerId: userId }
       ],
-      ...(status && { status: status.toUpperCase() as TransactionStatus })
+      ...(statusFilter && { status: statusFilter })
     }
 
     const transactions = await prisma.transaction.findMany({

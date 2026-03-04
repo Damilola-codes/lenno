@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/library/prisma"
 import { getServerSession } from '@/library/auth'
-import { Prisma } from "@prisma/client"
 import { z } from "zod"
 
 const JobQuerySchema = z.object({
@@ -29,7 +28,15 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit
 
     // Build where clause
-    const where: Prisma.JobWhereInput = { status: "OPEN" }
+    const where: {
+      status: "OPEN"
+      OR?: Array<
+        | { title: { contains: string; mode: "insensitive" } }
+        | { description: { contains: string; mode: "insensitive" } }
+      >
+      budget?: { gte?: number; lte?: number }
+      skills?: { some: { name: { in: string[] } } }
+    } = { status: "OPEN" }
     
     // Add search filter
     if (query.search) {

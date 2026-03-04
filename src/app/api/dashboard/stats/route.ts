@@ -210,10 +210,21 @@ export async function GET(req: NextRequest) {
         acceptedProposals,
         activeContracts,
         recentJobs,
-        monthlySpending: monthlySpending.reduce((sum, month) => sum + (month._sum.amount || 0), 0),
+        monthlySpending: monthlySpending.reduce(
+          (sum: number, month: (typeof monthlySpending)[number]) =>
+            sum + (month._sum.amount || 0),
+          0,
+        ),
         weeklySpending: monthlySpending
-          .filter(m => m.createdAt >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-          .reduce((sum, week) => sum + (week._sum.amount || 0), 0),
+          .filter(
+            (m: (typeof monthlySpending)[number]) =>
+              m.createdAt >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          )
+          .reduce(
+            (sum: number, week: (typeof monthlySpending)[number]) =>
+              sum + (week._sum.amount || 0),
+            0,
+          ),
         topFreelancers
       });
       
@@ -365,12 +376,21 @@ export async function GET(req: NextRequest) {
       ]);
 
       // Calculate success rate
-      const successRateCalc = successRate.reduce((acc, curr) => {
-        acc[curr.status] = curr._count;
-        return acc;
-      }, {} as Record<string, number>);
+      const successRateCalc: Record<string, number> = successRate.reduce(
+        (
+          acc: Record<string, number>,
+          curr: (typeof successRate)[number],
+        ) => {
+          acc[curr.status] = Number(curr._count ?? 0);
+          return acc;
+        },
+        {} as Record<string, number>,
+      );
       
-      const totalProposalsForRate = Object.values(successRateCalc).reduce((sum, count) => sum + count, 0);
+      const totalProposalsForRate = Object.values(successRateCalc).reduce(
+        (sum, count) => sum + count,
+        0,
+      );
       const acceptedCount = successRateCalc.ACCEPTED || 0;
       const calculatedSuccessRate = totalProposalsForRate > 0 ? Math.round((acceptedCount / totalProposalsForRate) * 100) : 0;
 
@@ -384,10 +404,21 @@ export async function GET(req: NextRequest) {
         completedJobs,
         totalEarnings: totalEarnings._sum.netAmount || 0,
         pendingPayments: pendingPayments._sum.netAmount || 0,
-        monthlyEarnings: monthlyEarnings.reduce((sum, month) => sum + (month._sum.netAmount || 0), 0),
+        monthlyEarnings: monthlyEarnings.reduce(
+          (sum: number, month: (typeof monthlyEarnings)[number]) =>
+            sum + (month._sum.netAmount || 0),
+          0,
+        ),
         weeklyEarnings: monthlyEarnings
-          .filter(m => m.createdAt >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-          .reduce((sum, week) => sum + (week._sum.netAmount || 0), 0),
+          .filter(
+            (m: (typeof monthlyEarnings)[number]) =>
+              m.createdAt >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+          )
+          .reduce(
+            (sum: number, week: (typeof monthlyEarnings)[number]) =>
+              sum + (week._sum.netAmount || 0),
+            0,
+          ),
         recentProposals,
         averageJobValue: averageJobValue._avg.netAmount || 0,
         successRate: calculatedSuccessRate,

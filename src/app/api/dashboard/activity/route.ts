@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
       ]);
 
       // Format activities
-      jobActivities.forEach(job => {
+      jobActivities.forEach((job: (typeof jobActivities)[number]) => {
         activities.push({
           id: `job-${job.id}`,
           type: 'job_posted',
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
         });
       });
 
-      proposalActivities.forEach(proposal => {
+      proposalActivities.forEach((proposal: (typeof proposalActivities)[number]) => {
         activities.push({
           id: `proposal-${proposal.id}`,
           type: 'proposal_received',
@@ -118,7 +118,7 @@ export async function GET(req: NextRequest) {
         });
       });
 
-      transactionActivities.forEach(transaction => {
+      transactionActivities.forEach((transaction: (typeof transactionActivities)[number]) => {
         activities.push({
           id: `transaction-${transaction.id}`,
           type: transaction.status === 'COMPLETED' ? 'payment_sent' : 'payment_processing',
@@ -188,7 +188,7 @@ export async function GET(req: NextRequest) {
       ]);
 
       // Format activities
-      proposalActivities.forEach(proposal => {
+      proposalActivities.forEach((proposal: (typeof proposalActivities)[number]) => {
         const statusText = proposal.status === 'ACCEPTED' ? 'Proposal Accepted' : 
                           proposal.status === 'REJECTED' ? 'Proposal Rejected' : 'Proposal Submitted';
         activities.push({
@@ -203,7 +203,7 @@ export async function GET(req: NextRequest) {
         });
       });
 
-      transactionActivities.forEach(transaction => {
+      transactionActivities.forEach((transaction: (typeof transactionActivities)[number]) => {
         activities.push({
           id: `transaction-${transaction.id}`,
           type: transaction.status === 'COMPLETED' ? 'job_completed' : 'work_in_progress',
@@ -215,7 +215,7 @@ export async function GET(req: NextRequest) {
         });
       });
 
-      paymentActivities.forEach(payment => {
+      paymentActivities.forEach((payment: (typeof paymentActivities)[number]) => {
         activities.push({
           id: `payment-${payment.id}`,
           type: 'payment_received',

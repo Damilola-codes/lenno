@@ -19,7 +19,7 @@ const nextConfig = {
     ]
   },
   images: {
-    domains: ['images.unsplash.com']
+    domains: ['images.unsplash.com', 'i.pravatar.cc']
   }
 }
 

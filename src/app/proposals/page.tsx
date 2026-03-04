@@ -1,163 +1,171 @@
-"use client"
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { 
-  FileText,
-  Search
-} from 'lucide-react'
-import MobileLayout from '@/components/layout/MobileLayout'
-import ProposalCard from '@/components/proposals/ProposalCard'
-import Button from '@/components/ui/Button'
-import Card from '@/components/ui/Card'
-import Input from '@/components/ui/Input'
+"use client";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { FileText, Search } from "lucide-react";
+import MobileLayout from "@/components/layout/MobileLayout";
+import ProposalCard from "@/components/proposals/ProposalCard";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import Input from "@/components/ui/Input";
 
 interface Proposal {
-  id: string
-  jobId: string
-  coverLetter: string
-  proposedRate: number
-  duration?: string
-  status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
-  createdAt: string
+  id: string;
+  jobId: string;
+  coverLetter: string;
+  proposedRate: number;
+  duration?: string;
+  status: "PENDING" | "ACCEPTED" | "REJECTED";
+  createdAt: string;
   freelancer: {
-    id: string
-    firstName: string
-    lastName: string
-    username: string
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
     profile?: {
-      avatar?: string
-      title?: string
-      hourlyRate?: number
-    }
-  }
+      avatar?: string;
+      title?: string;
+      hourlyRate?: number;
+    };
+  };
   job: {
-    title: string
-    budget: number
-    isHourly: boolean
-  }
+    title: string;
+    budget: number;
+    isHourly: boolean;
+  };
 }
 
 export default function ProposalsPage() {
-  const [proposals, setProposals] = useState<Proposal[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<'all' | 'pending' | 'accepted' | 'rejected'>('all')
-  const [searchQuery, setSearchQuery] = useState('')
-  const [userType] = useState<'CLIENT' | 'FREELANCER'>('FREELANCER') // This would come from auth context
-  const [hasInitialized, setHasInitialized] = useState(false)
+  const [proposals, setProposals] = useState<Proposal[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<
+    "all" | "pending" | "accepted" | "rejected"
+  >("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [userType] = useState<"CLIENT" | "FREELANCER">("FREELANCER"); // This would come from auth context
 
   // Remove problematic useEffect - no automatic API calls
 
   const fetchProposals = async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       const queryParams = new URLSearchParams({
-        ...(filter !== 'all' && { status: filter.toUpperCase() }),
-        ...(searchQuery && { search: searchQuery })
-      })
+        ...(filter !== "all" && { status: filter.toUpperCase() }),
+        ...(searchQuery && { search: searchQuery }),
+      });
 
-      const response = await fetch(`/api/proposals?${queryParams}`)
-      
+      const response = await fetch(`/api/proposals?${queryParams}`);
+
       if (response.status === 401) {
-        setError('Authentication required. Please sign in to view proposals.')
-        setProposals([])
-        return
+        setError("Authentication required. Please sign in to view proposals.");
+        setProposals([]);
+        return;
       }
-      
+
       if (response.status === 403) {
-        setError('You do not have permission to view proposals.')
-        setProposals([])
-        return
+        setError("You do not have permission to view proposals.");
+        setProposals([]);
+        return;
       }
-      
-      const data = await response.json()
+
+      const data = await response.json();
 
       if (response.ok) {
-        setProposals(data.proposals || [])
-        setHasInitialized(true)
+        setProposals(data.proposals || []);
       } else {
         // normalize error shape so UI always receives a string
-        const { normalizeApiError } = await import('@/library/utils')
-        setError(normalizeApiError(data.error) || `Failed to load proposals (${response.status})`)
-        setProposals([])
+        const { normalizeApiError } = await import("@/library/utils");
+        setError(
+          normalizeApiError(data.error) ||
+            `Failed to load proposals (${response.status})`,
+        );
+        setProposals([]);
       }
     } catch (error) {
-      console.error('Error fetching proposals:', error)
-      setError('Network error. Please check your connection and try again.')
-      setProposals([])
+      console.error("Error fetching proposals:", error);
+      setError("Network error. Please check your connection and try again.");
+      setProposals([]);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   // Manual search function
   const handleSearch = () => {
-    fetchProposals()
-  }
+    fetchProposals();
+  };
 
   // Manual filter change function
-  const handleFilterChange = (newFilter: 'all' | 'pending' | 'accepted' | 'rejected') => {
-    setFilter(newFilter)
+  const handleFilterChange = (
+    newFilter: "all" | "pending" | "accepted" | "rejected",
+  ) => {
+    setFilter(newFilter);
     // Don't automatically fetch - let user click search/refresh
-  }
+  };
 
   const handleAcceptProposal = async (proposalId: string) => {
     try {
       const response = await fetch(`/api/proposals/${proposalId}/accept`, {
-        method: 'PUT'
-      })
+        method: "PUT",
+      });
 
       if (response.ok) {
         // Refresh proposals
-        fetchProposals()
-        alert('Proposal accepted successfully!')
+        fetchProposals();
+        alert("Proposal accepted successfully!");
       } else {
-        const error = await response.json()
-        alert(`Error: ${error.error}`)
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
       }
     } catch (error) {
-      console.error('Error accepting proposal:', error)
-      alert('Failed to accept proposal')
+      console.error("Error accepting proposal:", error);
+      alert("Failed to accept proposal");
     }
-  }
+  };
 
   const handleRejectProposal = async (proposalId: string) => {
     try {
       const response = await fetch(`/api/proposals/${proposalId}/reject`, {
-        method: 'PUT'
-      })
+        method: "PUT",
+      });
 
       if (response.ok) {
         // Refresh proposals
-        fetchProposals()
-        alert('Proposal rejected')
+        fetchProposals();
+        alert("Proposal rejected");
       } else {
-        const error = await response.json()
-        alert(`Error: ${error.error}`)
+        const error = await response.json();
+        alert(`Error: ${error.error}`);
       }
     } catch (error) {
-      console.error('Error rejecting proposal:', error)
-      alert('Failed to reject proposal')
+      console.error("Error rejecting proposal:", error);
+      alert("Failed to reject proposal");
     }
-  }
+  };
 
   const filterCounts = {
     all: proposals.length,
-    pending: proposals.filter(p => p.status === 'PENDING').length,
-    accepted: proposals.filter(p => p.status === 'ACCEPTED').length,
-    rejected: proposals.filter(p => p.status === 'REJECTED').length
-  }
+    pending: proposals.filter((p) => p.status === "PENDING").length,
+    accepted: proposals.filter((p) => p.status === "ACCEPTED").length,
+    rejected: proposals.filter((p) => p.status === "REJECTED").length,
+  };
 
-  const filteredProposals = proposals.filter(proposal => {
-    const matchesFilter = filter === 'all' || proposal.status === filter.toUpperCase()
-    const matchesSearch = !searchQuery || 
+  const filteredProposals = proposals.filter((proposal) => {
+    const matchesFilter =
+      filter === "all" || proposal.status === filter.toUpperCase();
+    const matchesSearch =
+      !searchQuery ||
       proposal.job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      proposal.freelancer.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      proposal.freelancer.lastName.toLowerCase().includes(searchQuery.toLowerCase())
-    
-    return matchesFilter && matchesSearch
-  })
+      proposal.freelancer.firstName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase()) ||
+      proposal.freelancer.lastName
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
+
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <MobileLayout>
@@ -167,13 +175,12 @@ export default function ProposalsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-primary-900">
-                {userType === 'CLIENT' ? 'Received Proposals' : 'My Proposals'}
+                {userType === "CLIENT" ? "Received Proposals" : "My Proposals"}
               </h1>
               <p className="text-sm text-primary-600 mt-1">
-                {userType === 'CLIENT' 
-                  ? 'Review and manage proposals from freelancers'
-                  : 'Track your submitted proposals and their status'
-                }
+                {userType === "CLIENT"
+                  ? "Review and manage proposals from freelancers"
+                  : "Track your submitted proposals and their status"}
               </p>
             </div>
             <FileText className="w-8 h-8 text-primary-400" />
@@ -182,21 +189,17 @@ export default function ProposalsPage() {
           {/* Search */}
           <div className="flex space-x-2">
             <Input
-              placeholder={`Search ${userType === 'CLIENT' ? 'freelancers' : 'jobs'}...`}
+              placeholder={`Search ${userType === "CLIENT" ? "freelancers" : "jobs"}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleSearch()
+                if (e.key === "Enter") {
+                  handleSearch();
                 }
               }}
               icon={<Search className="w-4 h-4" />}
             />
-            <Button
-              variant="outline"
-              onClick={handleSearch}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={handleSearch} disabled={loading}>
               {loading ? (
                 <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
               ) : (
@@ -210,46 +213,64 @@ export default function ProposalsPage() {
         {/* Filter Tabs */}
         <div className="flex space-x-1 bg-primary-100 rounded-xl p-1">
           {[
-            { key: 'all', label: 'All', count: filterCounts.all },
-            { key: 'pending', label: 'Pending', count: filterCounts.pending },
-            { key: 'accepted', label: 'Accepted', count: filterCounts.accepted },
-            { key: 'rejected', label: 'Rejected', count: filterCounts.rejected }
+            { key: "all", label: "All", count: filterCounts.all },
+            { key: "pending", label: "Pending", count: filterCounts.pending },
+            {
+              key: "accepted",
+              label: "Accepted",
+              count: filterCounts.accepted,
+            },
+            {
+              key: "rejected",
+              label: "Rejected",
+              count: filterCounts.rejected,
+            },
           ].map((tab) => (
             <button
               key={tab.key}
-              onClick={() => handleFilterChange(tab.key as 'all' | 'pending' | 'accepted' | 'rejected')}
+              onClick={() =>
+                handleFilterChange(
+                  tab.key as "all" | "pending" | "accepted" | "rejected",
+                )
+              }
               className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-              filter === tab.key
-                ? 'bg-white text-primary-900 shadow-sm'
-                : 'text-primary-600 hover:text-primary-900'
+                filter === tab.key
+                  ? "bg-white text-primary-900 shadow-sm"
+                  : "text-primary-600 hover:text-primary-900"
               }`}
             >
               <span>{tab.label}</span>
               {tab.count > 0 && (
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                filter === tab.key 
-                ? 'bg-primary-100 text-primary-700'
-                : 'bg-primary-200 text-primary-600'
-              }`}>
-                {tab.count}
-              </span>
+                <span
+                  className={`text-xs px-1.5 py-0.5 rounded-full ${
+                    filter === tab.key
+                      ? "bg-primary-100 text-primary-700"
+                      : "bg-primary-200 text-primary-600"
+                  }`}
+                >
+                  {tab.count}
+                </span>
               )}
             </button>
           ))}
         </div>
 
         {/* Stats Cards (for clients) */}
-        {userType === 'CLIENT' && (
+        {userType === "CLIENT" && (
           <div className="grid grid-cols-2 gap-4">
             <Card className="text-center">
               <div className="space-y-1">
-                <div className="text-2xl font-bold text-primary-900">{filterCounts.pending}</div>
+                <div className="text-2xl font-bold text-primary-900">
+                  {filterCounts.pending}
+                </div>
                 <div className="text-sm text-primary-600">Pending Review</div>
               </div>
             </Card>
             <Card className="text-center">
               <div className="space-y-1">
-                <div className="text-2xl font-bold text-green-600">{filterCounts.accepted}</div>
+                <div className="text-2xl font-bold text-green-600">
+                  {filterCounts.accepted}
+                </div>
                 <div className="text-sm text-primary-600">Accepted</div>
               </div>
             </Card>
@@ -285,14 +306,16 @@ export default function ProposalsPage() {
                   <FileText className="w-12 h-12 mx-auto" />
                 </div>
                 <h3 className="text-lg font-medium text-red-900 mb-2">
-                  {error === 'Unauthorized' ? 'Please sign in to view proposals' : 'Error loading proposals'}
+                  {error === "Unauthorized"
+                    ? "Please sign in to view proposals"
+                    : "Error loading proposals"}
                 </h3>
                 <p className="text-red-600 mb-4 break-words whitespace-pre-wrap">
                   {error}
                 </p>
-                {error === 'Unauthorized' ? (
+                {error === "Unauthorized" ? (
                   <Button
-                    onClick={() => window.location.href = '/auth/signup'}
+                    onClick={() => (window.location.href = "/auth/signup")}
                     variant="outline"
                   >
                     Sign In
@@ -300,8 +323,8 @@ export default function ProposalsPage() {
                 ) : (
                   <Button
                     onClick={() => {
-                      setError(null)
-                      fetchProposals()
+                      setError(null);
+                      fetchProposals();
                     }}
                     variant="outline"
                   >
@@ -325,12 +348,12 @@ export default function ProposalsPage() {
                 >
                   <ProposalCard
                     proposal={proposal}
-                    isClient={userType === 'CLIENT'}
+                    isClient={userType === "CLIENT"}
                     onAccept={handleAcceptProposal}
                     onReject={handleRejectProposal}
                     onClick={() => {
                       // Handle proposal click - could open detailed view
-                      console.log('Proposal clicked:', proposal.id)
+                      console.log("Proposal clicked:", proposal.id);
                     }}
                   />
                 </motion.div>
@@ -342,19 +365,20 @@ export default function ProposalsPage() {
                 <FileText className="w-12 h-12 mx-auto" />
               </div>
               <h3 className="text-lg font-medium text-primary-900 mb-2">
-                {filter === 'all' ? 'No proposals yet' : `No ${filter} proposals`}
+                {filter === "all"
+                  ? "No proposals yet"
+                  : `No ${filter} proposals`}
               </h3>
               <p className="text-primary-600 mb-4">
-                {userType === 'CLIENT' 
-                  ? 'Proposals will appear here when freelancers apply to your jobs.'
-                  : filter === 'all' 
-                    ? 'Start submitting proposals to jobs that interest you.'
-                    : `You don't have any ${filter} proposals yet.`
-                }
+                {userType === "CLIENT"
+                  ? "Proposals will appear here when freelancers apply to your jobs."
+                  : filter === "all"
+                    ? "Start submitting proposals to jobs that interest you."
+                    : `You don't have any ${filter} proposals yet.`}
               </p>
-              {userType === 'FREELANCER' && (
+              {userType === "FREELANCER" && (
                 <Button
-                  onClick={() => window.location.href = '/jobs'}
+                  onClick={() => (window.location.href = "/jobs")}
                   variant="outline"
                 >
                   Browse Jobs
@@ -365,7 +389,7 @@ export default function ProposalsPage() {
         </div>
 
         {/* Quick Actions (floating) */}
-        {userType === 'CLIENT' && filterCounts.pending > 0 && (
+        {userType === "CLIENT" && filterCounts.pending > 0 && (
           <div className="fixed bottom-20 lg:bottom-6 right-4 space-y-2">
             <motion.div
               initial={{ scale: 0 }}
@@ -373,7 +397,9 @@ export default function ProposalsPage() {
               className="bg-white rounded-full shadow-lg border border-primary-200 p-3"
             >
               <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">{filterCounts.pending}</div>
+                <div className="text-lg font-bold text-orange-600">
+                  {filterCounts.pending}
+                </div>
                 <div className="text-xs text-primary-600">Pending</div>
               </div>
             </motion.div>
@@ -381,5 +407,5 @@ export default function ProposalsPage() {
         )}
       </div>
     </MobileLayout>
-  )
+  );
 }

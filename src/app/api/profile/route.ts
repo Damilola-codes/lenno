@@ -66,7 +66,13 @@ export async function GET() {
 
     // Calculate average rating
     const averageRating = user.reviewsReceived.length > 0
-      ? user.reviewsReceived.reduce((acc, review) => acc + review.rating, 0) / user.reviewsReceived.length
+      ? user.reviewsReceived.reduce(
+          (
+            acc: number,
+            review: (typeof user.reviewsReceived)[number],
+          ) => acc + review.rating,
+          0,
+        ) / user.reviewsReceived.length
       : null;
 
     return NextResponse.json({
