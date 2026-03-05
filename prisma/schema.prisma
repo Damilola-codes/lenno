@@ -40,6 +40,20 @@ enum TransactionStatus {
   DISPUTED
 }
 
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+}
+
+enum InvoiceRequestStatus {
+  PENDING
+  SENT
+  PAID
+  REJECTED
+}
+
 model User {
   id          String   @id @default(cuid())
   email       String   @unique
@@ -69,10 +83,60 @@ model User {
   clientTransactions Transaction[] @relation("ClientTransactions")
   freelancerTransactions Transaction[] @relation("FreelancerTransactions")
 
+  notifications Notification[]
+  invoiceRequests InvoiceRequest[]
+  progressLogs ProgressLog[]
+
   @@index([userType])
   @@index([createdAt])
   @@map("users")
 
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType @default(INFO)
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
+
+model InvoiceRequest {
+  id          String               @id @default(cuid())
+  userId      String
+  clientName  String
+  projectTitle String
+  amount      Float
+  status      InvoiceRequestStatus @default(PENDING)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("invoice_requests")
+}
+
+model ProgressLog {
+  id          String   @id @default(cuid())
+  userId      String
+  projectTitle String
+  update      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("progress_logs")
 }
 
 model Profile {

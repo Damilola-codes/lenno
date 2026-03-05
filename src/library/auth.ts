@@ -15,7 +15,7 @@ export interface User {
   id: string
   username: string
   email: string
-  userType: 'CLIENT' | 'FREELANCER'
+  userType: 'CLIENT' | 'FREELANCER' | 'USER'
   isVerified: boolean
   firstName: string
   lastName: string
@@ -32,6 +32,17 @@ export class Auth {
   private static SESSION_KEY = 'auth-session'
   private static TOKEN_KEY = 'auth-token'
 
+  private static writeSessionCookie(session: Session): void {
+    if (typeof document === 'undefined') return
+    const payload = encodeURIComponent(JSON.stringify(session))
+    document.cookie = `auth-session=${payload}; path=/; max-age=86400; samesite=lax`
+  }
+
+  private static clearSessionCookie(): void {
+    if (typeof document === 'undefined') return
+    document.cookie = 'auth-session=; path=/; max-age=0; samesite=lax'
+  }
+
   static setSession(user: User, token?: string): void {
     if (typeof window !== 'undefined') {
       const session: Session = {
@@ -40,6 +51,7 @@ export class Auth {
       }
 
       localStorage.setItem(this.SESSION_KEY, JSON.stringify(session))
+      this.writeSessionCookie(session)
       if (token) localStorage.setItem(this.TOKEN_KEY, token)
     }
   }
@@ -70,6 +82,7 @@ export class Auth {
     if (typeof window === 'undefined') return
     localStorage.removeItem(this.SESSION_KEY)
     localStorage.removeItem(this.TOKEN_KEY)
+    this.clearSessionCookie()
   }
 
   static isAuthenticated(): boolean {
@@ -116,6 +129,43 @@ export const authConfig = {
 }
 
 export async function getServerSession(): Promise<Session | null> {
-  // Placeholder for server session strategy
-  return null
+  try {
+    const [{ getServerSession: getNextAuthSession }, { authOptions }] = await Promise.all([
+      import('next-auth/next'),
+      import('@/library/nextauth'),
+    ])
+
+    const nextAuthSession = await getNextAuthSession(authOptions)
+    if (nextAuthSession?.user?.id) {
+      return {
+        user: {
+          id: nextAuthSession.user.id,
+          username: nextAuthSession.user.username || '',
+          email: nextAuthSession.user.email || '',
+          userType: (nextAuthSession.user.userType as User['userType']) || 'FREELANCER',
+          isVerified: true,
+          firstName: nextAuthSession.user.firstName || '',
+          lastName: nextAuthSession.user.lastName || '',
+        },
+        expires: nextAuthSession.expires,
+      }
+    }
+  } catch {
+    // fallback to cookie session
+  }
+
+  try {
+    const { cookies } = await import('next/headers')
+    const cookieStore = await cookies()
+    const raw = cookieStore.get('auth-session')?.value
+    if (!raw) return null
+
+    const parsed = JSON.parse(decodeURIComponent(raw)) as Session
+    if (!parsed?.user?.id || !parsed?.expires) return null
+    if (new Date(parsed.expires) < new Date()) return null
+
+    return parsed
+  } catch {
+    return null
+  }
 }

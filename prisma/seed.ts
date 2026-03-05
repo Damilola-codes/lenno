@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, type Skill } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -48,9 +48,8 @@ async function main() {
   ];
 
   // Upsert skills sequentially to avoid exhausting serverless DB connection pools
-  const createdSkills = [] as any[]
+  const createdSkills: Skill[] = []
   for (const skill of skills) {
-    // eslint-disable-next-line no-await-in-loop
     const s = await prisma.skill.upsert({
       where: { name: skill },
       update: {},
@@ -258,7 +257,7 @@ Jane`,
     }
   });
 
-  const proposal2 = await prisma.proposal.create({
+  await prisma.proposal.create({
     data: {
       jobId: job2.id,
       freelancerId: freelancer2.id,

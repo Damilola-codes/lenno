@@ -192,6 +192,15 @@
 }
 
 @layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
   /* Primary color utilities */
   .bg-primary-50 { background-color: var(--color-primary-50); }
   .bg-primary-100 { background-color: var(--color-primary-100); }

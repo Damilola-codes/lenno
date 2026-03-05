@@ -1,410 +1,172 @@
 "use client";
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { FileText, Search } from "lucide-react";
-import MobileLayout from "@/components/layout/MobileLayout";
-import ProposalCard from "@/components/proposals/ProposalCard";
-import Button from "@/components/ui/Button";
-import Card from "@/components/ui/Card";
-import Input from "@/components/ui/Input";
 
-interface Proposal {
+import { useMemo, useState } from "react";
+import Link from "next/link";
+import {
+  BoltIcon,
+  LinkIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline";
+import MobileLayout from "@/components/layout/MobileLayout";
+
+type ProposalTab = "active" | "referrals" | "archived";
+type ProposalBucket = "offers" | "interviews" | "activeProposals" | "submitted";
+
+interface ProposalRecord {
   id: string;
-  jobId: string;
-  coverLetter: string;
-  proposedRate: number;
-  duration?: string;
-  status: "PENDING" | "ACCEPTED" | "REJECTED";
-  createdAt: string;
-  freelancer: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    username: string;
-    profile?: {
-      avatar?: string;
-      title?: string;
-      hourlyRate?: number;
-    };
-  };
-  job: {
-    title: string;
-    budget: number;
-    isHourly: boolean;
-  };
+  tab: ProposalTab;
+  bucket: ProposalBucket;
 }
 
+const proposalSeed: ProposalRecord[] = [
+  { id: "p-1", tab: "active", bucket: "submitted" },
+  { id: "p-2", tab: "active", bucket: "submitted" },
+  { id: "p-3", tab: "active", bucket: "activeProposals" },
+  { id: "p-4", tab: "referrals", bucket: "offers" },
+  { id: "p-5", tab: "archived", bucket: "submitted" },
+];
+
 export default function ProposalsPage() {
-  const [proposals, setProposals] = useState<Proposal[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<
-    "all" | "pending" | "accepted" | "rejected"
-  >("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [userType] = useState<"CLIENT" | "FREELANCER">("FREELANCER"); // This would come from auth context
+  const [selectedTab, setSelectedTab] = useState<ProposalTab>("active");
+  const [availableNow, setAvailableNow] = useState(false);
 
-  // Remove problematic useEffect - no automatic API calls
+  const tabbedRecords = useMemo(
+    () => proposalSeed.filter((item) => item.tab === selectedTab),
+    [selectedTab],
+  );
 
-  const fetchProposals = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const queryParams = new URLSearchParams({
-        ...(filter !== "all" && { status: filter.toUpperCase() }),
-        ...(searchQuery && { search: searchQuery }),
-      });
+  const counts = useMemo(() => {
+    const counter = {
+      offers: 0,
+      interviews: 0,
+      activeProposals: 0,
+      submitted: 0,
+    };
 
-      const response = await fetch(`/api/proposals?${queryParams}`);
+    tabbedRecords.forEach((record) => {
+      counter[record.bucket] += 1;
+    });
 
-      if (response.status === 401) {
-        setError("Authentication required. Please sign in to view proposals.");
-        setProposals([]);
-        return;
-      }
+    return counter;
+  }, [tabbedRecords]);
 
-      if (response.status === 403) {
-        setError("You do not have permission to view proposals.");
-        setProposals([]);
-        return;
-      }
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setProposals(data.proposals || []);
-      } else {
-        // normalize error shape so UI always receives a string
-        const { normalizeApiError } = await import("@/library/utils");
-        setError(
-          normalizeApiError(data.error) ||
-            `Failed to load proposals (${response.status})`,
-        );
-        setProposals([]);
-      }
-    } catch (error) {
-      console.error("Error fetching proposals:", error);
-      setError("Network error. Please check your connection and try again.");
-      setProposals([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Manual search function
-  const handleSearch = () => {
-    fetchProposals();
-  };
-
-  // Manual filter change function
-  const handleFilterChange = (
-    newFilter: "all" | "pending" | "accepted" | "rejected",
-  ) => {
-    setFilter(newFilter);
-    // Don't automatically fetch - let user click search/refresh
-  };
-
-  const handleAcceptProposal = async (proposalId: string) => {
-    try {
-      const response = await fetch(`/api/proposals/${proposalId}/accept`, {
-        method: "PUT",
-      });
-
-      if (response.ok) {
-        // Refresh proposals
-        fetchProposals();
-        alert("Proposal accepted successfully!");
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.error}`);
-      }
-    } catch (error) {
-      console.error("Error accepting proposal:", error);
-      alert("Failed to accept proposal");
-    }
-  };
-
-  const handleRejectProposal = async (proposalId: string) => {
-    try {
-      const response = await fetch(`/api/proposals/${proposalId}/reject`, {
-        method: "PUT",
-      });
-
-      if (response.ok) {
-        // Refresh proposals
-        fetchProposals();
-        alert("Proposal rejected");
-      } else {
-        const error = await response.json();
-        alert(`Error: ${error.error}`);
-      }
-    } catch (error) {
-      console.error("Error rejecting proposal:", error);
-      alert("Failed to reject proposal");
-    }
-  };
-
-  const filterCounts = {
-    all: proposals.length,
-    pending: proposals.filter((p) => p.status === "PENDING").length,
-    accepted: proposals.filter((p) => p.status === "ACCEPTED").length,
-    rejected: proposals.filter((p) => p.status === "REJECTED").length,
-  };
-
-  const filteredProposals = proposals.filter((proposal) => {
-    const matchesFilter =
-      filter === "all" || proposal.status === filter.toUpperCase();
-    const matchesSearch =
-      !searchQuery ||
-      proposal.job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      proposal.freelancer.firstName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase()) ||
-      proposal.freelancer.lastName
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-
-    return matchesFilter && matchesSearch;
-  });
+  const sections = [
+    { key: "offers", label: "Offers", count: counts.offers },
+    {
+      key: "interviews",
+      label: "Invitations to interview",
+      count: counts.interviews,
+      withAvailability: true,
+    },
+    {
+      key: "activeProposals",
+      label: "Active proposals",
+      count: counts.activeProposals,
+    },
+    { key: "submitted", label: "Submitted proposals", count: counts.submitted },
+  ] as const;
 
   return (
     <MobileLayout>
-      <div className="px-4 py-6 space-y-6">
-        {/* Header */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-primary-900">
-                {userType === "CLIENT" ? "Received Proposals" : "My Proposals"}
-              </h1>
-              <p className="text-sm text-primary-600 mt-1">
-                {userType === "CLIENT"
-                  ? "Review and manage proposals from freelancers"
-                  : "Track your submitted proposals and their status"}
-              </p>
-            </div>
-            <FileText className="w-8 h-8 text-primary-400" />
-          </div>
-
-          {/* Search */}
-          <div className="flex space-x-2">
-            <Input
-              placeholder={`Search ${userType === "CLIENT" ? "freelancers" : "jobs"}...`}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleSearch();
-                }
-              }}
-              icon={<Search className="w-4 h-4" />}
-            />
-            <Button variant="outline" onClick={handleSearch} disabled={loading}>
-              {loading ? (
-                <div className="w-4 h-4 border-2 border-primary-400 border-t-transparent rounded-full animate-spin" />
-              ) : (
-                <Search className="w-4 h-4" />
-              )}
-            </Button>
-            {/* 'Load Proposals' button intentionally removed to avoid accidental bulk loads */}
-          </div>
-        </div>
-
-        {/* Filter Tabs */}
-        <div className="flex space-x-1 bg-primary-100 rounded-xl p-1">
-          {[
-            { key: "all", label: "All", count: filterCounts.all },
-            { key: "pending", label: "Pending", count: filterCounts.pending },
-            {
-              key: "accepted",
-              label: "Accepted",
-              count: filterCounts.accepted,
-            },
-            {
-              key: "rejected",
-              label: "Rejected",
-              count: filterCounts.rejected,
-            },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() =>
-                handleFilterChange(
-                  tab.key as "all" | "pending" | "accepted" | "rejected",
-                )
-              }
-              className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                filter === tab.key
-                  ? "bg-white text-primary-900 shadow-sm"
-                  : "text-primary-600 hover:text-primary-900"
-              }`}
+      <div className="px-3 sm:px-4 lg:px-6 py-4 bg-[#f5f7fb] min-h-screen">
+        <div className="max-w-[1300px] mx-auto">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-primary-900">
+              My proposals
+            </h1>
+            <Link
+              href="/dashboard/trends"
+              className="text-sm sm:text-base text-[#40ea42] font-medium underline underline-offset-4"
             >
-              <span>{tab.label}</span>
-              {tab.count > 0 && (
-                <span
-                  className={`text-xs px-1.5 py-0.5 rounded-full ${
-                    filter === tab.key
-                      ? "bg-primary-100 text-primary-700"
-                      : "bg-primary-200 text-primary-600"
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Stats Cards (for clients) */}
-        {userType === "CLIENT" && (
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="text-center">
-              <div className="space-y-1">
-                <div className="text-2xl font-bold text-primary-900">
-                  {filterCounts.pending}
-                </div>
-                <div className="text-sm text-primary-600">Pending Review</div>
-              </div>
-            </Card>
-            <Card className="text-center">
-              <div className="space-y-1">
-                <div className="text-2xl font-bold text-green-600">
-                  {filterCounts.accepted}
-                </div>
-                <div className="text-sm text-primary-600">Accepted</div>
-              </div>
-            </Card>
+              Stats and trends
+            </Link>
           </div>
-        )}
 
-        {/* Proposals List */}
-        <div className="space-y-4">
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(3)].map((_, i) => (
-                <Card key={i} className="animate-pulse">
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-primary-200 rounded-full"></div>
-                      <div className="flex-1 space-y-2">
-                        <div className="h-4 bg-primary-200 rounded w-3/4"></div>
-                        <div className="h-3 bg-primary-200 rounded w-1/2"></div>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="h-3 bg-primary-200 rounded"></div>
-                      <div className="h-3 bg-primary-200 rounded w-5/6"></div>
-                    </div>
+          <div className="mt-8 border-b border-primary-200">
+            <div className="flex items-center gap-5 sm:gap-8 text-lg sm:text-2xl overflow-x-auto no-scrollbar whitespace-nowrap">
+              {[
+                { key: "active", label: "Active" },
+                { key: "referrals", label: "Referrals" },
+                { key: "archived", label: "Archived" },
+              ].map((tab) => {
+                const isActive = selectedTab === tab.key;
+                return (
+                  <button
+                    key={tab.key}
+                    onClick={() => setSelectedTab(tab.key as ProposalTab)}
+                    className={`relative pb-2 transition-colors ${
+                      isActive
+                        ? "text-primary-900 font-medium"
+                        : "text-primary-500 hover:text-primary-800"
+                    }`}
+                  >
+                    {tab.label}
+                    {isActive && (
+                      <span className="absolute left-0 right-0 -bottom-[1px] h-[3px] rounded-full bg-[#0a4abf]" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-4">
+            {sections.map((section) => (
+              <div
+                key={section.key}
+                className="rounded-3xl bg-[#f4fbf6] border border-[#cfead9] p-2"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl sm:rounded-full bg-[#f8fdf9] border border-[#d8efdf] px-4 sm:px-5 py-4">
+                  <div className="inline-flex items-center gap-2 min-w-0">
+                    <h5 className="text-base sm:text-xl font-semibold text-primary-900 break-words">
+                      {section.label} ({section.count})
+                    </h5>
+                    <QuestionMarkCircleIcon className="w-5 h-5 text-primary-500 shrink-0" />
                   </div>
-                </Card>
-              ))}
-            </div>
-          ) : error ? (
-            <Card className="border-red-200 bg-red-50">
-              <div className="text-center py-12">
-                <div className="text-red-500 mb-4">
-                  <FileText className="w-12 h-12 mx-auto" />
-                </div>
-                <h3 className="text-lg font-medium text-red-900 mb-2">
-                  {error === "Unauthorized"
-                    ? "Please sign in to view proposals"
-                    : "Error loading proposals"}
-                </h3>
-                <p className="text-red-600 mb-4 break-words whitespace-pre-wrap">
-                  {error}
-                </p>
-                {error === "Unauthorized" ? (
-                  <Button
-                    onClick={() => (window.location.href = "/auth/signup")}
-                    variant="outline"
-                  >
-                    Sign In
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={() => {
-                      setError(null);
-                      fetchProposals();
-                    }}
-                    variant="outline"
-                  >
-                    Try Again
-                  </Button>
-                )}
-              </div>
-            </Card>
-          ) : filteredProposals.length > 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-4"
-            >
-              {filteredProposals.map((proposal, index) => (
-                <motion.div
-                  key={proposal.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <ProposalCard
-                    proposal={proposal}
-                    isClient={userType === "CLIENT"}
-                    onAccept={handleAcceptProposal}
-                    onReject={handleRejectProposal}
-                    onClick={() => {
-                      // Handle proposal click - could open detailed view
-                      console.log("Proposal clicked:", proposal.id);
-                    }}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
-          ) : (
-            <Card className="text-center py-12">
-              <div className="text-primary-500 mb-4">
-                <FileText className="w-12 h-12 mx-auto" />
-              </div>
-              <h3 className="text-lg font-medium text-primary-900 mb-2">
-                {filter === "all"
-                  ? "No proposals yet"
-                  : `No ${filter} proposals`}
-              </h3>
-              <p className="text-primary-600 mb-4">
-                {userType === "CLIENT"
-                  ? "Proposals will appear here when freelancers apply to your jobs."
-                  : filter === "all"
-                    ? "Start submitting proposals to jobs that interest you."
-                    : `You don't have any ${filter} proposals yet.`}
-              </p>
-              {userType === "FREELANCER" && (
-                <Button
-                  onClick={() => (window.location.href = "/jobs")}
-                  variant="outline"
-                >
-                  Browse Jobs
-                </Button>
-              )}
-            </Card>
-          )}
-        </div>
 
-        {/* Quick Actions (floating) */}
-        {userType === "CLIENT" && filterCounts.pending > 0 && (
-          <div className="fixed bottom-20 lg:bottom-6 right-4 space-y-2">
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="bg-white rounded-full shadow-lg border border-primary-200 p-3"
-            >
-              <div className="text-center">
-                <div className="text-lg font-bold text-orange-600">
-                  {filterCounts.pending}
+                  {"withAvailability" in section &&
+                    section.withAvailability && (
+                      <div className="inline-flex flex-wrap items-center gap-2 sm:gap-3">
+                        <button
+                          onClick={() => setAvailableNow((prev) => !prev)}
+                          className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm border ${
+                            availableNow
+                              ? "bg-[#ecf9ef] border-[#cde9d4] text-[#2e7b4d]"
+                              : "bg-white border-[#cde9d4] text-primary-600"
+                          }`}
+                        >
+                          <BoltIcon className="w-4 h-4" />
+                          Available now
+                        </button>
+                        <span className="text-sm font-medium text-primary-700">
+                          {availableNow ? "on" : "off"}
+                        </span>
+                        <button className="h-10 w-10 rounded-full border-2 border-[#78d45a] text-[#2e7b4d] flex items-center justify-center">
+                          <LinkIcon className="w-5 h-5" />
+                        </button>
+                      </div>
+                    )}
                 </div>
-                <div className="text-xs text-primary-600">Pending</div>
               </div>
-            </motion.div>
+            ))}
           </div>
-        )}
+
+          <div className="mt-7 flex flex-wrap items-center justify-start sm:justify-end gap-2 sm:gap-3 text-sm">
+            <Link
+              href="/jobs"
+              className="text-[#2e7b4d] font-medium underline underline-offset-4"
+            >
+              Search for jobs
+            </Link>
+            <span className="text-primary-300 hidden sm:inline">|</span>
+            <Link
+              href="/profile"
+              className="text-[#2e7b4d] font-medium underline underline-offset-4"
+            >
+              Manage your profile
+            </Link>
+          </div>
+        </div>
       </div>
     </MobileLayout>
   );

@@ -9,6 +9,7 @@ const JobQuerySchema = z.object({
   search: z.string().optional(),
   minBudget: z.string().optional(),
   maxBudget: z.string().optional(),
+  jobType: z.enum(["fixed", "hourly"]).optional(),
   skills: z.string().optional()
 })
 
@@ -35,6 +36,7 @@ export async function GET(req: NextRequest) {
         | { description: { contains: string; mode: "insensitive" } }
       >
       budget?: { gte?: number; lte?: number }
+      isHourly?: boolean
       skills?: { some: { name: { in: string[] } } }
     } = { status: "OPEN" }
     
@@ -55,6 +57,10 @@ export async function GET(req: NextRequest) {
       if (query.maxBudget) {
         where.budget.lte = parseFloat(query.maxBudget)
       }
+    }
+
+    if (query.jobType) {
+      where.isHourly = query.jobType === "hourly"
     }
     
     // Add skills filter

@@ -67,7 +67,28 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    return NextResponse.json(user, { status: 201 });
+    const sessionPayload = {
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        userType: user.userType,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isVerified: false,
+      },
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    }
+
+    const response = NextResponse.json(user, { status: 201 });
+    response.cookies.set('auth-session', encodeURIComponent(JSON.stringify(sessionPayload)), {
+      path: '/',
+      maxAge: 60 * 60 * 24,
+      sameSite: 'lax',
+      httpOnly: false,
+    });
+
+    return response;
   } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       const message = error.issues.map(i => i.message).join('; ')

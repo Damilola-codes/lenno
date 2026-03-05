@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
+import type { ZodIssue } from 'zod'
 
 // Simple session verification for app users
 async function verifySession(request: NextRequest) {
@@ -145,7 +146,7 @@ export function validateRequest<T>(schema: z.ZodSchema<T>) {
       return schema.parse(body)
     } catch (error: unknown) {
       if (error instanceof z.ZodError) {
-          const message = error.issues.map((i: any) => i.message).join('; ')
+          const message = error.issues.map((i: ZodIssue) => i.message).join('; ')
           return NextResponse.json(
             {
               error: message,

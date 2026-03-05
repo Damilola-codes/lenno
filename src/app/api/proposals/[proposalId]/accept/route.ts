@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
-import { Prisma } from "@prisma/client";
+
 
 // POST /api/proposals/[proposalId]/accept - Accept a proposal and create contract
 export async function POST(
@@ -74,7 +74,7 @@ export async function POST(
         freelancer: FreelancerInfo;
     }
 
-    const result: ContractResult = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+    const result: ContractResult = await prisma.$transaction(async (tx) => {
       // Accept the proposal
       await tx.proposal.update({
         where: { id: proposalId },

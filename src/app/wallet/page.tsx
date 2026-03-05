@@ -1,75 +1,243 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
+
+import { useEffect, useMemo, useState } from "react";
 import {
-  Wallet,
-  Send,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Eye,
-  EyeOff,
-  Copy,
-  ExternalLink,
-  TrendingUp,
-  Gift,
-  Star,
-  Zap,
-} from "lucide-react";
+  ArrowDownTrayIcon,
+  ArrowUpTrayIcon,
+  BanknotesIcon,
+  BoltIcon,
+  ChartBarIcon,
+  CheckCircleIcon,
+  EyeIcon,
+  EyeSlashIcon,
+  WalletIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
 import MobileLayout from "@/components/layout/MobileLayout";
-import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
+import Card from "@/components/ui/Card";
 import { Auth } from "@/library/auth";
+import TransactionDetailModal from "@/components/wallet/TransactionDetailModal";
 
-interface Transaction {
-  id: string;
-  type: "received" | "sent" | "reward" | "bonus";
-  amount: number;
-  description: string;
-  timestamp: string;
-  status: "completed" | "pending" | "failed";
-  from?: string;
-  to?: string;
-  jobId?: string;
-}
-
-interface User {
-  id: string;
-  username: string;
-  email: string;
-  userType: "CLIENT" | "FREELANCER";
-}
+type WalletView = "wallet" | "statistic" | "topup";
+type StatRange = "weekly" | "monthly";
+type FlowAction = "transfer" | "withdraw" | "topup";
+type FlowStep = "input" | "review" | "success";
 
 interface WalletStats {
   balance: number;
   pendingBalance: number;
   totalEarned: number;
   totalSpent: number;
-  rewardPoints: number;
+  neoPoints: number;
   level: number;
 }
 
+interface WalletTransaction {
+  id: string;
+  title: string;
+  date: string;
+  amount: number;
+  currencyLabel: string;
+  type: "credit" | "debit";
+  timestamp?: string;
+}
+
+interface LegacyWalletTransaction {
+  id: string;
+  type?: "received" | "sent" | "reward" | "bonus";
+  amount: number;
+  description?: string;
+  timestamp?: string;
+}
+
+interface TopUpMethod {
+  id: string;
+  label: string;
+  detail: string;
+}
+
+const MAX_WALLET_VALUE = 99_999_999;
+
+const topUpMethods: TopUpMethod[] = [
+  { id: "bank", label: "Bank Transfer", detail: "•••• •••• •••• 5324" },
+  { id: "paypal", label: "PayPal", detail: "freelancer@lenno.app" },
+  { id: "payoneer", label: "Payoneer", detail: "Lenno Workspace" },
+  { id: "usdc", label: "USDC Wallet", detail: "ERC20 / Polygon" },
+];
+
+const defaultTransactions: WalletTransaction[] = [
+  {
+    id: "tx-1",
+    title: "Transfer For Jason",
+    date: "March 18, 2024",
+    amount: 230,
+    currencyLabel: "Lenno Cash",
+    type: "credit",
+    timestamp: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: "tx-2",
+    title: "Payment Figma Pro",
+    date: "March 17, 2024",
+    amount: -50,
+    currencyLabel: "Lenno Cash",
+    type: "debit",
+    timestamp: new Date(Date.now() - 172800000).toISOString(),
+  },
+  {
+    id: "tx-3",
+    title: "Payment Apple Music",
+    date: "March 17, 2024",
+    amount: -12,
+    currencyLabel: "Lenno Cash",
+    type: "debit",
+    timestamp: new Date(Date.now() - 259200000).toISOString(),
+  },
+];
+
+const defaultStats: WalletStats = {
+  balance: 1459.7,
+  pendingBalance: 0,
+  totalEarned: 1459.7,
+  totalSpent: 127.96,
+  neoPoints: 320,
+  level: 1,
+};
+
+const topUpAmounts = [5, 10, 20, 50, 100, 150, 200, 250];
+
+function clampValue(value: number): number {
+  if (Number.isNaN(value)) return 0;
+  return Math.min(MAX_WALLET_VALUE, Math.max(0, value));
+}
+
+function formatMoney(value: number, minimumFractionDigits = 2) {
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits,
+    maximumFractionDigits: minimumFractionDigits,
+  });
+}
+
+function getAmountTextClass(displayText: string): string {
+  if (displayText.length > 16) return "text-2xl sm:text-3xl";
+  if (displayText.length > 12) return "text-2xl sm:text-3xl";
+  return "text-4xl";
+}
+
+function getStatAmountClass(value: number): string {
+  const display = formatMoney(value);
+  if (display.length > 12) return "text-[11px] sm:text-xs";
+  if (display.length > 9) return "text-xs sm:text-sm";
+  return "text-sm sm:text-base";
+}
+
+function toIsoOrNow(dateLike?: string): string {
+  if (!dateLike) return new Date().toISOString();
+  const date = new Date(dateLike);
+  return Number.isNaN(date.getTime())
+    ? new Date().toISOString()
+    : date.toISOString();
+}
+
+function toDisplayDate(dateLike?: string): string {
+  const date = new Date(toIsoOrNow(dateLike));
+  return date.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function normalizeTransactions(raw: string | null): WalletTransaction[] {
+  if (!raw) return defaultTransactions;
+
+  try {
+    const parsed = JSON.parse(raw) as Array<
+      WalletTransaction | LegacyWalletTransaction
+    >;
+    if (!Array.isArray(parsed) || parsed.length === 0)
+      return defaultTransactions;
+
+    return parsed.map((item, index) => {
+      if ("title" in item && "date" in item) {
+        return {
+          id: item.id || `tx-${index}`,
+          title: item.title,
+          date: item.date,
+          amount:
+            clampValue(Math.abs(item.amount)) * (item.amount >= 0 ? 1 : -1),
+          currencyLabel: item.currencyLabel || "Lenno Cash",
+          type: item.amount >= 0 ? "credit" : "debit",
+          timestamp: toIsoOrNow(item.timestamp || item.date),
+        };
+      }
+
+      const legacy = item as LegacyWalletTransaction;
+      return {
+        id: legacy.id || `legacy-${index}`,
+        title: legacy.description || "Wallet activity",
+        date: toDisplayDate(legacy.timestamp),
+        amount:
+          clampValue(Math.abs(legacy.amount)) * (legacy.amount >= 0 ? 1 : -1),
+        currencyLabel: "Lenno Cash",
+        type: legacy.amount >= 0 ? "credit" : "debit",
+        timestamp: toIsoOrNow(legacy.timestamp),
+      };
+    });
+  } catch {
+    return defaultTransactions;
+  }
+}
+
+function useAnimatedNumber(targetValue: number, duration = 450) {
+  const [displayValue, setDisplayValue] = useState(targetValue);
+
+  useEffect(() => {
+    let frame = 0;
+    const startValue = displayValue;
+    const difference = targetValue - startValue;
+    const startTime = performance.now();
+
+    const tick = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(startValue + difference * eased);
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [targetValue, displayValue, duration]);
+
+  return displayValue;
+}
+
 export default function WalletPage() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<WalletStats | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<WalletView>("wallet");
   const [showBalance, setShowBalance] = useState(true);
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "transactions" | "rewards"
-  >("overview");
-  const [showSendForm, setShowSendForm] = useState(false);
-  const [showReceiveForm, setShowReceiveForm] = useState(false);
-  const [sendAmount, setSendAmount] = useState<string>("");
-  const [sendTo, setSendTo] = useState<string>("");
-  const [receiveAmount, setReceiveAmount] = useState<string>("");
-  const [receiveFrom, setReceiveFrom] = useState<string>("");
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [modalContent, setModalContent] = useState<{
-    title: string;
-    message: string;
-  } | null>(null);
-  // Payment flow removed
+  const [statRange, setStatRange] = useState<StatRange>("weekly");
+  const [activeBarIndex, setActiveBarIndex] = useState(3);
+  const [selectedMethod, setSelectedMethod] = useState(topUpMethods[0].id);
+  const [selectedTopUpAmount, setSelectedTopUpAmount] = useState(200);
+  const [topUpInput, setTopUpInput] = useState("200");
+  const [isAmountEditing, setIsAmountEditing] = useState(false);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] =
+    useState<WalletTransaction | null>(null);
+  const [flowAction, setFlowAction] = useState<FlowAction | null>(null);
+  const [flowStep, setFlowStep] = useState<FlowStep>("input");
+  const [flowAmountInput, setFlowAmountInput] = useState("25");
+  const [flowTarget, setFlowTarget] = useState("");
+  const [flowError, setFlowError] = useState("");
+  const [flowDraftAmount, setFlowDraftAmount] = useState(0);
+  const [flowDraftTarget, setFlowDraftTarget] = useState("");
+  const [walletStats, setWalletStats] = useState<WalletStats>(defaultStats);
+  const [transactions, setTransactions] =
+    useState<WalletTransaction[]>(defaultTransactions);
+
+  const displayBalance = useAnimatedNumber(walletStats.balance);
+  const displayConnects = useAnimatedNumber(walletStats.neoPoints, 520);
 
   useEffect(() => {
     const user = Auth.getCurrentUser();
@@ -77,752 +245,868 @@ export default function WalletPage() {
       window.location.href = "/auth/signup";
       return;
     }
-    setCurrentUser(user);
-    // Try to load persisted wallet state for this user
+
     const statsKey = `wallet_stats_${user.id}`;
     const txKey = `wallet_transactions_${user.id}`;
 
     try {
-      const rawStats =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(statsKey)
-          : null;
-      const rawTx =
-        typeof window !== "undefined"
-          ? window.localStorage.getItem(txKey)
-          : null;
+      const rawStats = window.localStorage.getItem(statsKey);
+      const rawTx = window.localStorage.getItem(txKey);
 
       if (rawStats) {
-        setStats(JSON.parse(rawStats) as WalletStats);
-      } else {
-        // baseline stats for new users
-        setStats({
-          balance: 0,
-          pendingBalance: 0,
-          totalEarned: 0,
-          totalSpent: 0,
-          rewardPoints: 0,
-          level: 1,
-        });
+        const parsed = JSON.parse(rawStats) as Partial<WalletStats>;
+        setWalletStats((previous) => ({
+          ...previous,
+          ...parsed,
+          balance: clampValue(parsed.balance ?? previous.balance),
+          pendingBalance: clampValue(
+            parsed.pendingBalance ?? previous.pendingBalance,
+          ),
+          totalEarned: clampValue(parsed.totalEarned ?? previous.totalEarned),
+          totalSpent: clampValue(parsed.totalSpent ?? previous.totalSpent),
+          neoPoints: clampValue(parsed.neoPoints ?? previous.neoPoints),
+        }));
       }
 
-      if (rawTx) {
-        setTransactions(JSON.parse(rawTx) as Transaction[]);
-      } else {
-        // start with empty history for new users
-        setTransactions([]);
-      }
+      setTransactions(normalizeTransactions(rawTx));
     } catch {
-      // fallback to safe defaults
-      setStats({
-        balance: 0,
-        pendingBalance: 0,
-        totalEarned: 0,
-        totalSpent: 0,
-        rewardPoints: 0,
-        level: 1,
-      });
-      setTransactions([]);
-    } finally {
-      setLoading(false);
+      setWalletStats(defaultStats);
+      setTransactions(defaultTransactions);
     }
   }, []);
 
-  const persistWallet = useCallback(
-    (
-      userId: string | undefined,
-      newStats: WalletStats | null,
-      newTx: Transaction[],
-    ) => {
-      if (!userId) return;
-      try {
-        const statsKey = `wallet_stats_${userId}`;
-        const txKey = `wallet_transactions_${userId}`;
-        if (newStats)
-          window.localStorage.setItem(statsKey, JSON.stringify(newStats));
-        window.localStorage.setItem(txKey, JSON.stringify(newTx));
-      } catch (e) {
-        // ignore localStorage errors
-        console.warn("Could not persist wallet state", e);
-      }
-    },
-    [],
+  useEffect(() => {
+    const numericAmount = Number(topUpInput.replace(/,/g, ""));
+    if (!Number.isNaN(numericAmount) && numericAmount > 0) {
+      setSelectedTopUpAmount(clampValue(numericAmount));
+    }
+  }, [topUpInput]);
+
+  const normalizedTopUpInput = useMemo(() => {
+    const parsed = Number(topUpInput.replace(/,/g, ""));
+    return Number.isNaN(parsed) ? 0 : clampValue(parsed);
+  }, [topUpInput]);
+
+  const selectedMethodLabel =
+    topUpMethods.find((method) => method.id === selectedMethod)?.label ||
+    "Bank Transfer";
+
+  const topUpTax = useMemo(() => {
+    const percentageTax = selectedTopUpAmount * 0.005;
+    return Number((1 + percentageTax).toFixed(2));
+  }, [selectedTopUpAmount]);
+
+  const topUpTotal = useMemo(() => {
+    return Number((selectedTopUpAmount + topUpTax).toFixed(2));
+  }, [selectedTopUpAmount, topUpTax]);
+
+  const weeklyData = useMemo(() => {
+    const labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    return labels.map((label, index) => {
+      const tx = transactions[index] || transactions[transactions.length - 1];
+      const magnitude = Math.min(100, Math.max(18, Math.abs(tx?.amount || 0)));
+      return { label, value: magnitude };
+    });
+  }, [transactions]);
+
+  const monthlyData = useMemo(() => {
+    const labels = ["W1", "W2", "W3", "W4"];
+    return labels.map((label, index) => {
+      const source =
+        transactions[index] || transactions[transactions.length - 1];
+      const magnitude = Math.min(
+        100,
+        Math.max(24, Math.abs(source?.amount || 0) + index * 5),
+      );
+      return { label, value: magnitude };
+    });
+  }, [transactions]);
+
+  const chartData = statRange === "weekly" ? weeklyData : monthlyData;
+  const activeDataPoint = chartData[activeBarIndex] || chartData[0];
+
+  const incomeTotal = useMemo(
+    () =>
+      transactions
+        .filter((item) => item.amount > 0)
+        .reduce((sum, item) => sum + item.amount, 0),
+    [transactions],
   );
 
-  const getTransactionIcon = (type: Transaction["type"]) => {
-    switch (type) {
-      case "received":
-        return <ArrowDownLeft className="w-4 h-4 text-green-600" />;
-      case "sent":
-        return <ArrowUpRight className="w-4 h-4 text-red-600" />;
-      case "reward":
-        return <Gift className="w-4 h-4 text-accent-600" />;
-      case "bonus":
-        return <Star className="w-4 h-4 text-warning-600" />;
-      default:
-        return <Wallet className="w-4 h-4 text-primary-400" />;
+  const expenseTotal = useMemo(
+    () =>
+      Math.abs(
+        transactions
+          .filter((item) => item.amount < 0)
+          .reduce((sum, item) => sum + item.amount, 0),
+      ),
+    [transactions],
+  );
+
+  const persistWallet = (
+    nextStats: WalletStats,
+    nextTransactions: WalletTransaction[],
+  ) => {
+    const user = Auth.getCurrentUser();
+    if (!user) return;
+
+    try {
+      window.localStorage.setItem(
+        `wallet_stats_${user.id}`,
+        JSON.stringify(nextStats),
+      );
+      window.localStorage.setItem(
+        `wallet_transactions_${user.id}`,
+        JSON.stringify(nextTransactions),
+      );
+    } catch {
+      // ignore write failures
     }
   };
 
-  const formatTimeAgo = (timestamp: string) => {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInHours = Math.floor(
-      (now.getTime() - time.getTime()) / (1000 * 60 * 60),
-    );
-
-    if (diffInHours < 1) return "Just now";
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    return `${Math.floor(diffInHours / 24)}d ago`;
+  const resetFlow = () => {
+    setFlowAction(null);
+    setFlowStep("input");
+    setFlowAmountInput("25");
+    setFlowTarget("");
+    setFlowError("");
+    setFlowDraftAmount(0);
+    setFlowDraftTarget("");
   };
 
-  const copyWalletAddress = () => {
-    const mockAddress = `addr_${currentUser?.id?.slice(0, 8)}...${currentUser?.id?.slice(-8)}`;
-    navigator.clipboard.writeText(mockAddress);
-    // You could add a toast notification here
+  const handleStartPayFlow = () => {
+    if (!flowAction) return;
+
+    const parsedAmount = Number(flowAmountInput.replace(/,/g, ""));
+    const amount = clampValue(Number.isNaN(parsedAmount) ? 0 : parsedAmount);
+
+    if (amount <= 0) {
+      setFlowError("Enter a valid amount.");
+      return;
+    }
+
+    if (flowAction !== "topup" && amount > walletStats.balance) {
+      setFlowError("Insufficient balance for this action.");
+      return;
+    }
+
+    const recipient = flowTarget.trim();
+    if (!recipient) {
+      setFlowError("Enter receiver name or destination.");
+      return;
+    }
+
+    setFlowDraftAmount(amount);
+    setFlowDraftTarget(recipient);
+    setFlowError("");
+    setFlowStep("review");
   };
 
-  // Note: wallet refresh logic removed for now (use API endpoints in future)
+  const handleConfirmPay = () => {
+    if (!flowAction) return;
 
-  if (loading) {
-    return (
-      <MobileLayout>
-        <div className="px-4 py-6">
-          <div className="animate-pulse space-y-6">
-            <div className="h-32 bg-primary-200 rounded-xl"></div>
-            <div className="grid grid-cols-2 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-20 bg-primary-200 rounded-lg"></div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </MobileLayout>
-    );
-  }
+    const isTopUp = flowAction === "topup";
+    const title = isTopUp
+      ? `Top Up via ${flowDraftTarget}`
+      : flowAction === "transfer"
+        ? `Transfer to ${flowDraftTarget}`
+        : `Withdraw to ${flowDraftTarget}`;
+
+    const nextStats: WalletStats = isTopUp
+      ? {
+          ...walletStats,
+          balance: clampValue(
+            Number((walletStats.balance + flowDraftAmount).toFixed(2)),
+          ),
+          totalEarned: clampValue(
+            Number((walletStats.totalEarned + flowDraftAmount).toFixed(2)),
+          ),
+          neoPoints: clampValue(
+            walletStats.neoPoints +
+              Math.max(1, Math.floor(flowDraftAmount / 10)),
+          ),
+        }
+      : {
+          ...walletStats,
+          balance: clampValue(
+            Number((walletStats.balance - flowDraftAmount).toFixed(2)),
+          ),
+          totalSpent: clampValue(
+            Number((walletStats.totalSpent + flowDraftAmount).toFixed(2)),
+          ),
+        };
+
+    const flowTransaction: WalletTransaction = {
+      id: `tx-${Date.now()}`,
+      title,
+      date: toDisplayDate(),
+      amount: isTopUp ? flowDraftAmount : -flowDraftAmount,
+      currencyLabel: "Lenno Cash",
+      type: isTopUp ? "credit" : "debit",
+      timestamp: new Date().toISOString(),
+    };
+
+    const nextTransactions = [flowTransaction, ...transactions];
+    setWalletStats(nextStats);
+    setTransactions(nextTransactions);
+    persistWallet(nextStats, nextTransactions);
+    setFlowStep("success");
+  };
+
+  const handleBeginTopUpFlow = () => {
+    if (selectedTopUpAmount <= 0) return;
+    setFlowAction("topup");
+    setFlowStep("review");
+    setFlowDraftAmount(selectedTopUpAmount);
+    setFlowDraftTarget(selectedMethodLabel);
+    setFlowError("");
+  };
+
+  const balanceText = showBalance
+    ? `$ ${formatMoney(displayBalance)}`
+    : "$ ••••";
+  const balanceTextClass = getAmountTextClass(balanceText);
 
   return (
     <MobileLayout>
-      <div className="px-4 py-6 space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-primary-900">Wallet</h1>
-            <p className="text-sm text-primary-600 mt-1">
-              Manage your account balance
-            </p>
-          </div>
-          <Wallet className="w-8 h-8 text-secondary-600" />
-        </div>
-
-        {/* Balance Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Card className="bg-gradient-to-br from-primary-50 to-secondary-50 border border-primary-200">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <div className="w-8 h-8 bg-secondary-500 rounded-full flex items-center justify-center">
-                    <span className="text-lg font-bold text-white">W</span>
-                  </div>
-                  <span className="text-sm text-primary-700 font-medium">
-                    Wallet
-                  </span>
-                </div>
-                <button
-                  onClick={() => setShowBalance(!showBalance)}
-                  className="p-2 hover:bg-primary-100 rounded-lg transition-colors"
-                >
-                  {showBalance ? (
-                    <EyeOff className="w-5 h-5 text-primary-600" />
-                  ) : (
-                    <Eye className="w-5 h-5 text-primary-600" />
-                  )}
-                </button>
-              </div>
-
-              <div>
-                <p className="text-sm text-primary-600">Available Balance</p>
-                <p className="text-3xl font-bold text-primary-900">
-                  {showBalance ? `$${stats?.balance?.toFixed(2)}` : "•••••"}
-                </p>
-              </div>
-
-              {stats?.pendingBalance && stats.pendingBalance > 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-xs text-yellow-700">Pending</p>
-                  <p className="text-lg font-semibold text-yellow-800">
-                    {showBalance
-                      ? `$${stats?.pendingBalance?.toFixed(2)}`
-                      : "•••••"}
-                  </p>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-2">
-                <button
-                  onClick={copyWalletAddress}
-                  className="flex items-center space-x-1 text-sm opacity-90 hover:opacity-100"
-                >
-                  <span className="text-primary-700">
-                    addr_{currentUser?.id?.slice(0, 8)}...
-                    {currentUser?.id?.slice(-8)}
-                  </span>
-                  <Copy className="w-4 h-4 text-primary-600" />
-                </button>
-                <button className="p-2 hover:bg-primary-100 rounded-lg transition-colors">
-                  <ExternalLink className="w-4 h-4 text-primary-600" />
-                </button>
-              </div>
-            </div>
-          </Card>
-        </motion.div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-4">
-          <Button
-            type="button"
-            onClick={() => {
-              setShowSendForm(true);
-              setActiveTab("transactions");
-            }}
-            className="h-12 bg-secondary-600 hover:bg-secondary-700 text-white"
-          >
-            <Send className="w-4 h-4 mr-2" />
-            Send
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setShowReceiveForm(true);
-              setActiveTab("transactions");
-            }}
-            className="h-12 border-secondary-600 text-secondary-700 hover:bg-secondary-50"
-          >
-            <ArrowDownLeft className="w-4 h-4 mr-2" />
-            Receive
-          </Button>
-        </div>
-
-        {/* Send / Receive Forms (local demo only) */}
-        {showSendForm && (
-          <Card>
-            <h3 className="font-semibold text-primary-900 mb-2">Send Funds</h3>
-            <div className="space-y-2">
-              <Input
-                placeholder="Recipient (username or address)"
-                value={sendTo}
-                onChange={(e) => setSendTo(e.target.value)}
-              />
-              <Input
-                placeholder="Amount"
-                value={sendAmount}
-                onChange={(e) => setSendAmount(e.target.value)}
-              />
-              <p className="text-xs text-primary-500">
-                Enter a numeric value. Example: 12.50
-              </p>
-              <div className="flex space-x-2">
-                <Button
-                  onClick={async () => {
-                    const amt = Number(sendAmount);
-                    // basic validations
-                    const isAmountValid = !Number.isNaN(amt) && amt > 0;
-                    const emailLike = /@/.test(sendTo);
-                    const usernameLike = /^[a-zA-Z0-9_]{3,30}$/.test(sendTo);
-                    if (!isAmountValid) return;
-                    if (!sendTo || (!emailLike && !usernameLike)) return;
-                    // update balances locally
-                    setStats((s) => {
-                      const current = s || {
-                        balance: 0,
-                        pendingBalance: 0,
-                        totalEarned: 0,
-                        totalSpent: 0,
-                        rewardPoints: 0,
-                        level: 0,
-                      };
-                      const newBalance = Math.max(
-                        0,
-                        (current.balance || 0) - amt,
-                      );
-                      return {
-                        ...current,
-                        balance: newBalance,
-                        totalSpent: (current.totalSpent || 0) + amt,
-                      };
-                    });
-                    // add transaction
-                    const newTx: Transaction = {
-                      id: `tx_${Date.now()}`,
-                      type: "sent",
-                      amount: amt,
-                      description: `Sent to ${sendTo}`,
-                      timestamp: new Date().toISOString(),
-                      status: "completed",
-                      to: sendTo,
-                    };
-                    setTransactions((t) => {
-                      const merged = [newTx, ...t];
-                      persistWallet(currentUser?.id, null, merged);
-                      return merged;
-                    });
-                    // persist stats as well
-                    setStats((s) => {
-                      const updated = s || {
-                        balance: 0,
-                        pendingBalance: 0,
-                        totalEarned: 0,
-                        totalSpent: 0,
-                        rewardPoints: 0,
-                        level: 0,
-                      };
-                      persistWallet(currentUser?.id, updated, []);
-                      return updated;
-                    });
-                    // reset
-                    setSendAmount("");
-                    setSendTo("");
-                    setShowSendForm(false);
-                    setModalContent({
-                      title: "Sent",
-                      message: `You sent $${amt.toFixed(2)} to ${sendTo}`,
-                    });
-                    setShowConfirmModal(true);
-                  }}
-                  className="bg-secondary-600 text-white"
-                >
-                  Confirm
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowSendForm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {showReceiveForm && (
-          <Card>
-            <h3 className="font-semibold text-primary-900 mb-2">
-              Receive Funds
-            </h3>
-            <div className="space-y-2">
-              <Input
-                placeholder="Sender (username or address)"
-                value={receiveFrom}
-                onChange={(e) => setReceiveFrom(e.target.value)}
-              />
-              <Input
-                placeholder="Amount"
-                value={receiveAmount}
-                onChange={(e) => setReceiveAmount(e.target.value)}
-              />
-              <p className="text-xs text-primary-500">
-                Amounts must be numeric. Sender should be a username or email.
-              </p>
-              <div className="flex space-x-2">
-                <Button
-                  onClick={() => {
-                    const amt = Number(receiveAmount);
-                    const isAmountValid = !Number.isNaN(amt) && amt > 0;
-                    const emailLike = /@/.test(receiveFrom);
-                    const usernameLike = /^[a-zA-Z0-9_]{3,30}$/.test(
-                      receiveFrom,
-                    );
-                    if (!isAmountValid) return;
-                    if (!receiveFrom || (!emailLike && !usernameLike)) return;
-                    setStats((s) => {
-                      const current = s || {
-                        balance: 0,
-                        pendingBalance: 0,
-                        totalEarned: 0,
-                        totalSpent: 0,
-                        rewardPoints: 0,
-                        level: 0,
-                      };
-                      const updated = {
-                        ...current,
-                        balance: (current.balance || 0) + amt,
-                        totalEarned: (current.totalEarned || 0) + amt,
-                      };
-                      persistWallet(currentUser?.id, updated, transactions);
-                      return updated;
-                    });
-                    const newTx: Transaction = {
-                      id: `tx_${Date.now()}`,
-                      type: "received",
-                      amount: amt,
-                      description: `Received from ${receiveFrom}`,
-                      timestamp: new Date().toISOString(),
-                      status: "completed",
-                      from: receiveFrom,
-                    };
-                    setTransactions((t) => {
-                      const merged = [newTx, ...t];
-                      persistWallet(currentUser?.id, null, merged);
-                      return merged;
-                    });
-                    setReceiveAmount("");
-                    setReceiveFrom("");
-                    setShowReceiveForm(false);
-                    setModalContent({
-                      title: "Received",
-                      message: `You received $${amt.toFixed(2)} from ${receiveFrom}`,
-                    });
-                    setShowConfirmModal(true);
-                  }}
-                  className="bg-secondary-600 text-white"
-                >
-                  Confirm
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowReceiveForm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </Card>
-        )}
-
-        {/* Confirmation Modal */}
-        {showConfirmModal && modalContent && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div
-              className="absolute inset-0 bg-black/40"
-              onClick={() => setShowConfirmModal(false)}
-            />
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="relative bg-white rounded-xl shadow-xl max-w-sm w-full p-6 z-10"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
-                  <Gift className="w-6 h-6 text-green-600" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-primary-900">
-                    {modalContent.title}
-                  </h4>
-                  <p className="text-sm text-primary-600">
-                    {modalContent.message}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-4 text-right">
-                <Button
-                  onClick={() => setShowConfirmModal(false)}
-                  className="px-4"
-                >
-                  Done
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-
-        {/* Tab Navigation */}
-        <div className="flex space-x-1 bg-primary-100 rounded-xl p-1">
-          {[
-            { key: "overview", label: "Overview" },
-            { key: "transactions", label: "History" },
-            { key: "rewards", label: "Rewards" },
-          ].map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() =>
-                setActiveTab(tab.key as "overview" | "transactions" | "rewards")
-              }
-              className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                activeTab === tab.key
-                  ? "bg-white text-primary-900 shadow-sm"
-                  : "text-primary-600 hover:text-primary-900"
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        {activeTab === "overview" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4">
-              <Card className="text-center">
-                <div className="space-y-2">
-                  <TrendingUp className="w-6 h-6 text-green-600 mx-auto" />
-                  <div className="text-lg font-bold text-primary-900">
-                    ${stats?.totalEarned?.toFixed(2)}
-                  </div>
-                  <div className="text-xs text-primary-600">Total Earned</div>
-                </div>
-              </Card>
-
-              <Card className="text-center">
-                <div className="space-y-2">
-                  <ArrowUpRight className="w-6 h-6 text-red-600 mx-auto" />
-                  <div className="text-lg font-bold text-primary-900">
-                    ${stats?.totalSpent?.toFixed(2)}
-                  </div>
-                  <div className="text-xs text-primary-600">Total Spent</div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Recent Transactions */}
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-primary-900">
-                  Recent Activity
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab("transactions")}
-                >
-                  View All
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                {transactions.slice(0, 3).map((tx) => (
-                  <div key={tx.id} className="flex items-center space-x-3">
-                    <div className="flex-shrink-0">
-                      {getTransactionIcon(tx.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-primary-900 truncate">
-                        {tx.description}
-                      </p>
-                      <p className="text-xs text-primary-600">
-                        {formatTimeAgo(tx.timestamp)}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p
-                        className={`text-sm font-semibold ${
-                          tx.type === "received" ||
-                          tx.type === "reward" ||
-                          tx.type === "bonus"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {tx.type === "sent" ? "-" : "+"}${tx.amount.toFixed(2)}
-                      </p>
-                      <p
-                        className={`text-xs ${
-                          tx.status === "completed"
-                            ? "text-green-600"
-                            : tx.status === "pending"
-                              ? "text-yellow-600"
-                              : "text-red-600"
-                        }`}
-                      >
-                        {tx.status}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          </motion.div>
-        )}
-
-        {activeTab === "transactions" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            {transactions.map((tx) => (
-              <Card key={tx.id}>
-                <div className="flex items-center space-x-3">
-                  <div className="flex-shrink-0">
-                    {getTransactionIcon(tx.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-medium text-primary-900">
-                        {tx.description}
-                      </p>
-                      <p
-                        className={`text-sm font-semibold ${
-                          tx.type === "received" ||
-                          tx.type === "reward" ||
-                          tx.type === "bonus"
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        {tx.type === "sent" ? "-" : "+"}${tx.amount.toFixed(2)}
-                      </p>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-primary-600">
-                        {tx.from && `From ${tx.from}`}
-                        {tx.to && `To ${tx.to}`}
-                        {!tx.from && !tx.to && "System Transaction"}
-                      </p>
-                      <div className="flex items-center space-x-2">
-                        <span
-                          className={`text-xs px-2 py-1 rounded-full ${
-                            tx.status === "completed"
-                              ? "bg-green-100 text-green-600"
-                              : tx.status === "pending"
-                                ? "bg-yellow-100 text-yellow-600"
-                                : "bg-red-100 text-red-600"
-                          }`}
-                        >
-                          {tx.status}
-                        </span>
-                        <span className="text-xs text-primary-400">
-                          {formatTimeAgo(tx.timestamp)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-          </motion.div>
-        )}
-
-        {activeTab === "rewards" && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            {/* Gamification Level */}
-            <Card className="bg-gradient-to-r from-accent-50 to-warning-50 border-accent-200">
-              <div className="text-center space-y-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-accent-500 to-warning-500 rounded-full flex items-center justify-center mx-auto">
-                  <Star className="w-8 h-8 text-yellow-100" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-primary-900">
-                    User Level {stats?.level}
-                  </h3>
-                  <p className="text-sm text-primary-600">Earning Specialist</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Progress to Level {(stats?.level || 0) + 1}</span>
-                    <span>{stats?.rewardPoints}/2000 XP</span>
-                  </div>
-                  <div className="w-full bg-primary-200 rounded-full h-2">
-                    <div
-                      className="bg-gradient-to-r from-accent-500 to-warning-500 h-2 rounded-full transition-all duration-300"
-                      style={{
-                        width: `${((stats?.rewardPoints || 0) / 2000) * 100}%`,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Reward Points */}
-            <Card>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-primary-900">
-                  Reward Points
-                </h3>
-                <Zap className="w-5 h-5 text-accent-600" />
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold text-accent-600">
-                  {stats?.rewardPoints}
-                </div>
-                <p className="text-sm text-primary-600">Available Points</p>
-              </div>
-            </Card>
-
-            {/* Achievements */}
-            <Card>
-              <h3 className="font-semibold text-primary-900 mb-4">
-                Recent Achievements
-              </h3>
-              <div className="space-y-3">
-                {[
-                  {
-                    title: "First Milestone",
-                    description: "Complete your first project",
-                    points: 100,
-                    unlocked: true,
-                  },
-                  {
-                    title: "Top Earner",
-                    description: "Earn your first 100 credits",
-                    points: 200,
-                    unlocked: true,
-                  },
-                  {
-                    title: "Pro Member",
-                    description: "Complete 10 projects",
-                    points: 500,
-                    unlocked: false,
-                  },
-                ].map((achievement, index) => (
-                  <div
-                    key={index}
-                    className={`flex items-center space-x-3 p-3 rounded-lg ${
-                      achievement.unlocked ? "bg-green-50" : "bg-gray-50"
+      <div className="px-4 lg:px-6 py-4 bg-[#eef3f6] min-h-screen">
+        <div className="max-w-[460px] mx-auto space-y-4">
+          <div className="rounded-3xl bg-white border border-primary-200 p-4">
+            <div className="inline-flex rounded-full border border-primary-200 bg-primary-50 p-1">
+              {[
+                { key: "wallet", label: "Wallet" },
+                { key: "statistic", label: "Statistic" },
+                { key: "topup", label: "Top Up" },
+              ].map((item) => {
+                const isActive = view === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setView(item.key as WalletView)}
+                    className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+                      isActive
+                        ? "bg-[#0a4abf] text-white"
+                        : "text-primary-700 hover:text-primary-900"
                     }`}
                   >
-                    <div
-                      className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                        achievement.unlocked ? "bg-green-600" : "bg-gray-400"
-                      }`}
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {view === "wallet" && (
+              <>
+                <div className="mt-4 rounded-3xl border border-primary-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-primary-500">
+                      Lenno Cash Main Balance
+                    </span>
+                    <button
+                      onClick={() => setShowBalance((previous) => !previous)}
+                      className="text-primary-500"
                     >
-                      <Star
-                        className={`w-4 h-4 ${achievement.unlocked ? "text-green-100" : "text-gray-200"}`}
-                      />
+                      {showBalance ? (
+                        <EyeIcon className="w-5 h-5" />
+                      ) : (
+                        <EyeSlashIcon className="w-5 h-5" />
+                      )}
+                    </button>
+                  </div>
+
+                  <p
+                    className={`font-semibold text-primary-900 mt-1 whitespace-nowrap leading-tight ${balanceTextClass}`}
+                  >
+                    {balanceText}
+                  </p>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-primary-700">
+                    <div>
+                      <p className="text-xs text-primary-500">Wallet Number</p>
+                      <p className="font-medium">•••• •••• •••• 5324</p>
                     </div>
-                    <div className="flex-1">
-                      <p
-                        className={`text-sm font-medium ${
-                          achievement.unlocked
-                            ? "text-primary-900"
-                            : "text-primary-600"
-                        }`}
-                      >
-                        {achievement.title}
-                      </p>
-                      <p className="text-xs text-primary-600">
-                        {achievement.description}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-accent-600">
-                        +{achievement.points}
+                    <div>
+                      <p className="text-xs text-primary-500">Lenno Connects</p>
+                      <p className="font-medium">
+                        {Math.round(displayConnects).toLocaleString("en-US")}{" "}
+                        Connects
                       </p>
                     </div>
                   </div>
+
+                  <p className="text-xs text-primary-500 mt-2">
+                    Lenno Connects work like proposal credits, similar to Upwork
+                    Connects.
+                  </p>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <Button
+                      onClick={() => {
+                        setFlowAction("transfer");
+                        setFlowStep("input");
+                        setFlowError("");
+                        setFlowTarget("");
+                        setFlowAmountInput("25");
+                      }}
+                      className="rounded-full bg-[#abff31] text-primary-900 hover:bg-[#9ae62c]"
+                    >
+                      <ArrowUpTrayIcon className="w-4 h-4 mr-2" />
+                      Transfer
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setFlowAction("withdraw");
+                        setFlowStep("input");
+                        setFlowError("");
+                        setFlowTarget(selectedMethodLabel);
+                        setFlowAmountInput("25");
+                      }}
+                      className="rounded-full bg-[#abff31] text-primary-900 hover:bg-[#9ae62c]"
+                    >
+                      <ArrowDownTrayIcon className="w-4 h-4 mr-2" />
+                      Withdraw
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {view === "statistic" && (
+              <div className="mt-4 rounded-3xl border border-primary-200 p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <p className="text-xs text-primary-500">Total Expense</p>
+                    <p
+                      className={`font-semibold text-primary-900 mt-1 whitespace-nowrap ${getAmountTextClass(
+                        `-$ ${formatMoney(expenseTotal)}`,
+                      )}`}
+                    >
+                      -$ {formatMoney(expenseTotal)}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 w-full sm:w-auto rounded-full border border-primary-200 bg-primary-50 p-1">
+                    {(["weekly", "monthly"] as StatRange[]).map((range) => (
+                      <button
+                        key={range}
+                        onClick={() => {
+                          setStatRange(range);
+                          setActiveBarIndex(0);
+                        }}
+                        className={`px-2 py-1 rounded-full text-xs text-center whitespace-nowrap ${
+                          statRange === range
+                            ? "bg-[#abff31] text-primary-900"
+                            : "text-primary-700"
+                        }`}
+                      >
+                        {range === "weekly" ? "Weekly" : "Monthly"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-7 gap-1 items-end h-28">
+                  {chartData.map((point, index) => (
+                    <button
+                      key={point.label}
+                      onClick={() => setActiveBarIndex(index)}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <div
+                        className={`w-8 rounded-full transition-all duration-500 ${
+                          activeBarIndex === index
+                            ? "bg-[#abff31]"
+                            : "bg-primary-100"
+                        }`}
+                        style={{ height: `${point.value * 0.95}px` }}
+                      />
+                      <span className="text-[10px] text-primary-500">
+                        {point.label}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-2 text-xs text-primary-600">
+                  Selected: {activeDataPoint.label} • intensity{" "}
+                  {Math.round(activeDataPoint.value)}
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <Card className="p-2 bg-white border border-gray-200 shadow-none">
+                    <p className="text-xs text-primary-500">Income</p>
+                    <p
+                      className={`font-semibold text-primary-900 leading-tight break-words ${getStatAmountClass(
+                        incomeTotal,
+                      )}`}
+                    >
+                      +$ {formatMoney(incomeTotal)}
+                    </p>
+                  </Card>
+                  <Card className="p-2 bg-white border border-gray-200 shadow-none">
+                    <p className="text-xs text-primary-500">Expense</p>
+                    <p
+                      className={`font-semibold text-primary-900 leading-tight break-words ${getStatAmountClass(
+                        expenseTotal,
+                      )}`}
+                    >
+                      -$ {formatMoney(expenseTotal)}
+                    </p>
+                  </Card>
+                </div>
+              </div>
+            )}
+
+            {view === "topup" && (
+              <div className="mt-4 space-y-3">
+                <Card className="border border-primary-200 p-3 bg-white">
+                  <p className="text-xs text-primary-500">Top Up Methods</p>
+                  <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {topUpMethods.map((method) => {
+                      const isActive = selectedMethod === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          onClick={() => setSelectedMethod(method.id)}
+                          className={`rounded-2xl border p-3 text-left transition-colors ${
+                            isActive
+                              ? "border-[#abff31] bg-[#f5ffe5]"
+                              : "border-primary-200 hover:border-primary-300"
+                          }`}
+                        >
+                          <p className="text-sm font-medium text-primary-900">
+                            {method.label}
+                          </p>
+                          <p className="text-xs text-primary-500">
+                            {method.detail}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Card>
+
+                <Card className="border border-primary-200 p-3 bg-white">
+                  <p className="text-xs text-primary-500">Top Up Amount</p>
+                  <div className="mt-1 flex items-center gap-2 rounded-2xl border border-primary-200 px-3 py-2">
+                    <span className="text-primary-600">$</span>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={
+                        isAmountEditing
+                          ? topUpInput
+                          : formatMoney(normalizedTopUpInput)
+                      }
+                      onFocus={() => {
+                        setIsAmountEditing(true);
+                        setTopUpInput(String(normalizedTopUpInput));
+                      }}
+                      onBlur={() => {
+                        setIsAmountEditing(false);
+                        setTopUpInput(String(normalizedTopUpInput));
+                      }}
+                      onChange={(event) => {
+                        const rawValue = event.target.value.replace(/,/g, "");
+                        if (!/^\d*(\.\d{0,2})?$/.test(rawValue)) return;
+                        const numericValue = Number(rawValue || "0");
+                        if (numericValue > MAX_WALLET_VALUE) {
+                          setTopUpInput(String(MAX_WALLET_VALUE));
+                          setSelectedTopUpAmount(MAX_WALLET_VALUE);
+                          return;
+                        }
+                        setTopUpInput(rawValue);
+                      }}
+                      className={`w-full font-semibold text-primary-900 bg-transparent outline-none whitespace-nowrap ${
+                        normalizedTopUpInput >= 1_000_000
+                          ? "text-3xl sm:text-4xl"
+                          : "text-4xl"
+                      }`}
+                      placeholder="0.00"
+                    />
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-4 gap-2">
+                    {topUpAmounts.map((amount) => {
+                      const isActive = selectedTopUpAmount === amount;
+                      return (
+                        <button
+                          key={amount}
+                          onClick={() => {
+                            setSelectedTopUpAmount(amount);
+                            setTopUpInput(String(amount));
+                          }}
+                          className={`rounded-full border px-2 py-1.5 text-sm ${
+                            isActive
+                              ? "bg-[#abff31] border-[#9ae62c] text-primary-900 font-medium"
+                              : "border-primary-200 text-primary-700"
+                          }`}
+                        >
+                          $ {amount}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    onClick={handleBeginTopUpFlow}
+                    className="mt-4 w-full rounded-full bg-[#abff31] text-primary-900 hover:bg-[#9ae62c]"
+                  >
+                    <BoltIcon className="w-4 h-4 mr-2" />
+                    Top Up
+                  </Button>
+                </Card>
+
+                <Card className="border border-primary-200 p-3 bg-white">
+                  <p className="text-sm font-medium text-primary-900 mb-2">
+                    Detail Top up
+                  </p>
+                  <div className="space-y-1.5 text-sm">
+                    <div className="flex items-center justify-between text-primary-600">
+                      <span>From</span>
+                      <span>{selectedMethodLabel}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-primary-600">
+                      <span>To</span>
+                      <span>Top Up Lenno</span>
+                    </div>
+                    <div className="flex items-center justify-between text-primary-600">
+                      <span>Amount</span>
+                      <span>$ {formatMoney(selectedTopUpAmount)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-primary-600">
+                      <span>Tax</span>
+                      <span>$ {formatMoney(topUpTax)}</span>
+                    </div>
+                    <div className="flex items-center justify-between font-semibold text-primary-900 pt-1 border-t border-primary-100">
+                      <span>Total</span>
+                      <span>$ {formatMoney(topUpTotal)}</span>
+                    </div>
+                  </div>
+                </Card>
+              </div>
+            )}
+
+            <div className="mt-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-primary-900">
+                  Recent Transaction
+                </h3>
+                <button
+                  className="text-sm text-primary-500 underline"
+                  onClick={() => setIsHistoryModalOpen(true)}
+                >
+                  View all
+                </button>
+              </div>
+
+              <div className="mt-2 space-y-2">
+                {transactions.slice(0, 3).map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setSelectedTransaction(item)}
+                    className="w-full rounded-2xl border border-primary-200 bg-white px-3 py-2 flex items-center justify-between text-left"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-primary-900">
+                        {item.title}
+                      </p>
+                      <p className="text-xs text-primary-500">{item.date}</p>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className={`text-sm font-semibold ${item.amount >= 0 ? "text-[#2e7b4d]" : "text-primary-800"}`}
+                      >
+                        {item.amount >= 0 ? "+" : "-"}${" "}
+                        {formatMoney(Math.abs(item.amount))}
+                      </p>
+                      <p className="text-xs text-primary-500">
+                        {item.currencyLabel}
+                      </p>
+                    </div>
+                  </button>
                 ))}
               </div>
-            </Card>
-          </motion.div>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-primary-200 bg-white p-3 flex items-center justify-between">
+            <div className="inline-flex items-center gap-2 text-primary-700 text-sm">
+              <ChartBarIcon className="w-5 h-5" />
+              <span>
+                Interactive insights update automatically from wallet activity
+              </span>
+            </div>
+            <CheckCircleIcon className="w-5 h-5 text-[#2e7b4d]" />
+          </div>
+
+          <div className="rounded-2xl border border-primary-200 bg-white p-3 flex items-center justify-between">
+            <div className="inline-flex items-center gap-2 text-primary-700 text-sm">
+              <WalletIcon className="w-5 h-5" />
+              <span>Lenno Connects available for proposal submissions</span>
+            </div>
+            <BanknotesIcon className="w-5 h-5 text-[#0a4abf]" />
+          </div>
+        </div>
+
+        <TransactionDetailModal
+          open={!!selectedTransaction}
+          transaction={selectedTransaction}
+          onClose={() => setSelectedTransaction(null)}
+          formatAmount={(value) => formatMoney(value)}
+        />
+
+        {flowAction && (
+          <div className="fixed inset-0 z-[75] flex items-center justify-center p-4">
+            <button
+              className="absolute inset-0 bg-[#0a4abf]/20"
+              onClick={resetFlow}
+            />
+            <div className="relative w-full max-w-sm rounded-3xl border border-primary-200 bg-white p-5">
+              <button
+                onClick={resetFlow}
+                className="absolute right-4 top-4 h-8 w-8 rounded-full border border-primary-200 flex items-center justify-center text-primary-700 hover:bg-primary-50"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+
+              {flowStep === "input" && (
+                <>
+                  <p className="text-xs uppercase tracking-wide text-primary-500">
+                    Quick action
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold text-primary-900 capitalize">
+                    {flowAction}
+                  </h3>
+                  <p className="mt-1 text-sm text-primary-600">
+                    {flowAction === "transfer"
+                      ? "Send funds to another freelancer or collaborator."
+                      : flowAction === "topup"
+                        ? "Add funds from your selected method to your wallet."
+                        : "Move wallet funds to your selected payout destination."}
+                  </p>
+
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="text-xs text-primary-500">
+                        Receiver / Destination
+                      </label>
+                      <input
+                        type="text"
+                        value={flowTarget}
+                        onChange={(event) => {
+                          setFlowTarget(event.target.value);
+                          setFlowError("");
+                        }}
+                        placeholder={
+                          flowAction === "transfer"
+                            ? "Enter receiver name"
+                            : selectedMethodLabel
+                        }
+                        className="mt-1 w-full rounded-2xl border border-primary-200 px-3 py-2 text-sm text-primary-900 outline-none focus:border-primary-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-primary-500">Amount</label>
+                      <div className="mt-1 flex items-center rounded-2xl border border-primary-200 px-3 py-2">
+                        <span className="text-primary-600 mr-2">$</span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={flowAmountInput}
+                          onChange={(event) => {
+                            const rawValue = event.target.value.replace(
+                              /,/g,
+                              "",
+                            );
+                            if (!/^\d*(\.\d{0,2})?$/.test(rawValue)) return;
+                            const numericValue = Number(rawValue || "0");
+                            setFlowAmountInput(
+                              numericValue > MAX_WALLET_VALUE
+                                ? String(MAX_WALLET_VALUE)
+                                : rawValue,
+                            );
+                            setFlowError("");
+                          }}
+                          className="w-full bg-transparent text-lg font-semibold text-primary-900 outline-none"
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl bg-primary-50 border border-primary-100 p-3 text-xs text-primary-700">
+                      Available balance: $ {formatMoney(walletStats.balance)}
+                    </div>
+
+                    {flowError && (
+                      <p className="text-xs text-red-600">{flowError}</p>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={resetFlow}
+                        className="rounded-full border border-primary-200 px-4 py-2 text-sm text-primary-700"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleStartPayFlow}
+                        className="rounded-full bg-[#abff31] px-4 py-2 text-sm font-medium text-primary-900 hover:bg-[#9ae62c]"
+                      >
+                        Pay
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {flowStep === "review" && (
+                <>
+                  <p className="text-xs uppercase tracking-wide text-primary-500">
+                    Payment overview
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold text-primary-900">
+                    {flowAction === "topup"
+                      ? "You are about to top up your wallet"
+                      : "You are about to send a payment"}
+                  </h3>
+                  <p className="mt-1 text-sm text-primary-600">
+                    {flowAction === "topup"
+                      ? "Please confirm the source method and amount before we process this top up."
+                      : "Please confirm the receiver and amount below before we process this payment."}
+                  </p>
+
+                  <div className="mt-4 rounded-2xl bg-primary-50 border border-primary-100 p-3 space-y-2 text-sm">
+                    <div className="flex items-center justify-between text-primary-600">
+                      <span>
+                        {flowAction === "topup" ? "Method" : "Receiver"}
+                      </span>
+                      <span className="font-medium text-primary-900">
+                        {flowDraftTarget}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-primary-600">
+                      <span>Amount</span>
+                      <span className="font-semibold text-primary-900">
+                        $ {formatMoney(flowDraftAmount)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-primary-600">
+                      <span>Action</span>
+                      <span className="capitalize text-primary-900">
+                        {flowAction}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setFlowStep("input")}
+                      className="rounded-full border border-primary-200 px-4 py-2 text-sm text-primary-700"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleConfirmPay}
+                      className="rounded-full bg-[#abff31] px-4 py-2 text-sm font-medium text-primary-900 hover:bg-[#9ae62c]"
+                    >
+                      {flowAction === "topup"
+                        ? "Confirm top up"
+                        : "Confirm pay"}
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {flowStep === "success" && (
+                <>
+                  <p className="text-xs uppercase tracking-wide text-primary-500">
+                    Success
+                  </p>
+                  <h3 className="mt-1 text-xl font-semibold text-primary-900">
+                    {flowAction === "topup"
+                      ? "Top up completed"
+                      : "Payment completed"}
+                  </h3>
+                  <p className="mt-1 text-sm text-primary-600">
+                    {flowAction === "topup"
+                      ? `$ ${formatMoney(flowDraftAmount)} was added successfully from ${flowDraftTarget}.`
+                      : `$ ${formatMoney(flowDraftAmount)} was transferred successfully to ${flowDraftTarget}.`}
+                  </p>
+
+                  <div className="mt-4 rounded-2xl bg-[#f5ffe5] border border-[#d4efaa] p-3 text-sm text-primary-800">
+                    <p className="font-medium">
+                      {flowAction === "topup"
+                        ? "Top up successful"
+                        : "Transfer successful"}
+                    </p>
+                    <p className="mt-1">
+                      {flowAction === "topup" ? "Method" : "Receiver"}:{" "}
+                      {flowDraftTarget}
+                    </p>
+                    <p>Amount: $ {formatMoney(flowDraftAmount)}</p>
+                  </div>
+
+                  <button
+                    onClick={resetFlow}
+                    className="mt-4 w-full rounded-full bg-[#abff31] px-4 py-2 text-sm font-medium text-primary-900 hover:bg-[#9ae62c]"
+                  >
+                    Done
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isHistoryModalOpen && (
+          <div className="fixed inset-0 z-[74] flex items-center justify-center p-4">
+            <button
+              className="absolute inset-0 bg-[#0a4abf]/20"
+              onClick={() => setIsHistoryModalOpen(false)}
+            />
+            <div className="relative w-full max-w-md rounded-3xl border border-primary-200 bg-white p-5">
+              <button
+                onClick={() => setIsHistoryModalOpen(false)}
+                className="absolute right-4 top-4 h-8 w-8 rounded-full border border-primary-200 flex items-center justify-center text-primary-700 hover:bg-primary-50"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+
+              <p className="text-xs uppercase tracking-wide text-primary-500">
+                History
+              </p>
+              <h3 className="mt-1 text-xl font-semibold text-primary-900">
+                Transaction history
+              </h3>
+
+              <div className="mt-4 max-h-[60vh] overflow-y-auto space-y-2 pr-1">
+                {transactions.map((item) => (
+                  <button
+                    key={`history-modal-${item.id}`}
+                    onClick={() => {
+                      setSelectedTransaction(item);
+                      setIsHistoryModalOpen(false);
+                    }}
+                    className="w-full rounded-xl border border-primary-100 px-3 py-2 flex items-center justify-between text-left hover:bg-primary-50"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-primary-900">
+                        {item.title}
+                      </p>
+                      <p className="text-xs text-primary-500">{item.date}</p>
+                    </div>
+                    <p className="text-sm font-semibold text-primary-800">
+                      {item.amount >= 0 ? "+" : "-"}${" "}
+                      {formatMoney(Math.abs(item.amount))}
+                    </p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         )}
       </div>
-
-      {/* Payment flow removed. */}
     </MobileLayout>
   );
 }

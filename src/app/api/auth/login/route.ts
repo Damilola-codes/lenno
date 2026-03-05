@@ -9,13 +9,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Database not configured. Please set DATABASE_URL in .env' }, { status: 503 })
     }
     const body = await req.json()
-    const { email, password } = body || {}
+    const { email, identifier, countryCode, password } = body || {}
+    const loginIdentifier = (identifier || email || '').toString().trim()
 
-    if (!email || !password) {
+    if (!loginIdentifier || !password) {
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 })
     }
 
-    const user = await prisma.user.findUnique({ where: { email } })
+    const normalizedCountryCode = (countryCode || '+62').toString().replace('+', '')
+    const normalizedDigits = loginIdentifier.replace(/\D/g, '')
+    const isEmail = loginIdentifier.includes('@')
+    const usernameCandidates = isEmail || !normalizedDigits
+      ? []
+      : [
+          `ph_${normalizedCountryCode}${normalizedDigits}`,
+          `ph_${normalizedDigits}`
+        ]
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: loginIdentifier },
+          ...(usernameCandidates.length ? usernameCandidates.map((candidate) => ({ username: candidate })) : [])
+        ]
+      }
+    })
     if (!user) {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     }
@@ -36,7 +54,20 @@ export async function POST(req: NextRequest) {
       isVerified: user.isVerified
     }
 
-    return NextResponse.json(safeUser)
+    const sessionPayload = {
+      user: safeUser,
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    }
+
+    const response = NextResponse.json(safeUser)
+    response.cookies.set('auth-session', encodeURIComponent(JSON.stringify(sessionPayload)), {
+      path: '/',
+      maxAge: 60 * 60 * 24,
+      sameSite: 'lax',
+      httpOnly: false,
+    })
+
+    return response
   } catch (error: unknown) {
     console.error('Login error:', error)
     const msg = error instanceof Error ? error.message : String(error ?? '')
