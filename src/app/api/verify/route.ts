@@ -69,7 +69,7 @@ export async function GET() {
     await prisma.$queryRaw`SELECT 1`;
 
     const resetTokenTableCheck = (await prisma.$queryRaw`
-      SELECT to_regclass('public.password_reset_tokens') AS table_name
+      SELECT to_regclass('public.password_reset_tokens')::text AS table_name
     `) as Array<{ table_name: string | null }>;
 
     const hasResetTokenTable = Boolean(resetTokenTableCheck[0]?.table_name);
