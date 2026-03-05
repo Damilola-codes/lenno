@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
   const searchParams = useSearchParams();
   const token = useMemo(() => searchParams.get("token") || "", [searchParams]);
 
@@ -142,5 +142,24 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white px-4 py-10">
+          <div className="mx-auto max-w-md rounded-2xl border border-primary-200 bg-white p-6 shadow-sm">
+            <h1 className="text-2xl font-semibold text-primary-900">
+              Reset password
+            </h1>
+            <p className="mt-2 text-sm text-primary-700">Loading...</p>
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordContent />
+    </Suspense>
   );
 }

@@ -1,8 +1,39 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/library/prisma'
 
+function databaseUrlIssue() {
+  const value = process.env.DATABASE_URL
+  if (!value || !value.trim()) return 'DATABASE_URL is missing.'
+
+  const trimmed = value.trim()
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return 'DATABASE_URL contains wrapping quotes. Remove surrounding quotes in production environment variables.'
+  }
+
+  if (!trimmed.startsWith('postgresql://') && !trimmed.startsWith('postgres://')) {
+    return 'DATABASE_URL must start with postgresql:// or postgres://'
+  }
+
+  return null
+}
+
 export async function GET() {
   console.log('🔍 Database health check started')
+
+  const dbUrlIssue = databaseUrlIssue()
+  if (dbUrlIssue) {
+    return NextResponse.json(
+      {
+        status: 'unhealthy',
+        error: dbUrlIssue,
+        timestamp: new Date().toISOString(),
+      },
+      { status: 500 },
+    )
+  }
   
   try {
     // Test basic connection
