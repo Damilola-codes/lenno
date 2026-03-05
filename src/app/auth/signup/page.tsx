@@ -19,6 +19,10 @@ export default function SignupPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<
+    "idle" | "checking" | "available" | "taken" | "invalid" | "error"
+  >("idle");
+  const [usernameMessage, setUsernameMessage] = useState("");
   const [userType, setUserType] = useState<"CLIENT" | "FREELANCER">(
     "FREELANCER",
   );
@@ -35,14 +39,99 @@ export default function SignupPage() {
     return () => clearTimeout(timeout);
   }, [error]);
 
+  useEffect(() => {
+    if (step !== 2) return;
+
+    const normalized = username.trim().toLowerCase();
+    if (!normalized) {
+      setUsernameStatus("idle");
+      setUsernameMessage("");
+      return;
+    }
+
+    if (!/^[a-z0-9_]{3,20}$/.test(normalized)) {
+      setUsernameStatus("invalid");
+      setUsernameMessage(
+        "Use 3-20 characters: lowercase letters, numbers, and underscores only.",
+      );
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        setUsernameStatus("checking");
+        setUsernameMessage("Checking username...");
+
+        const response = await fetch(
+          `/api/auth/check-user?username=${encodeURIComponent(normalized)}`,
+          { cache: "no-store" },
+        );
+
+        const data = (await response.json()) as {
+          available?: boolean;
+          reason?: string;
+        };
+
+        if (cancelled) return;
+
+        if (!response.ok) {
+          if (response.status === 400) {
+            setUsernameStatus("invalid");
+            setUsernameMessage(
+              data.reason ||
+                "Use 3-20 characters: lowercase letters, numbers, and underscores only.",
+            );
+            return;
+          }
+
+          setUsernameStatus("error");
+          setUsernameMessage("Unable to check username right now.");
+          return;
+        }
+
+        if (data.available) {
+          setUsernameStatus("available");
+          setUsernameMessage("Username is available.");
+          return;
+        }
+
+        setUsernameStatus("taken");
+        setUsernameMessage(data.reason || "Username is already taken.");
+      } catch {
+        if (cancelled) return;
+        setUsernameStatus("error");
+        setUsernameMessage("Unable to check username right now.");
+      }
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [step, username]);
+
   const handleRegister = async () => {
     if (!firstName.trim() || !lastName.trim()) {
       setError("First name and last name are required.");
       return;
     }
 
-    if (username.trim().length < 3) {
-      setError("Username must be at least 3 characters.");
+    const normalizedUsername = username.trim().toLowerCase();
+    if (!/^[a-z0-9_]{3,20}$/.test(normalizedUsername)) {
+      setError(
+        "Username must be 3-20 characters and use only lowercase letters, numbers, and underscores.",
+      );
+      return;
+    }
+
+    if (usernameStatus === "checking") {
+      setError("Please wait while we check username availability.");
+      return;
+    }
+
+    if (usernameStatus === "taken") {
+      setError("That username is already taken. Choose another one.");
       return;
     }
 
@@ -71,7 +160,7 @@ export default function SignupPage() {
         body: JSON.stringify({
           email: emailForRegister,
           password,
-          username: username.trim() || fallbackUsername,
+          username: normalizedUsername || fallbackUsername,
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           userType,
@@ -255,11 +344,33 @@ export default function SignupPage() {
                     </span>
                     <input
                       type="text"
-                      placeholder="Username"
+                      placeholder="username"
                       value={username}
-                      onChange={(e) => setUsername(e.target.value)}
+                      onChange={(e) =>
+                        setUsername(
+                          e.target.value
+                            .toLowerCase()
+                            .replace(/[^a-z0-9_]/g, "")
+                            .slice(0, 20),
+                        )
+                      }
                       className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-gray-800 placeholder:text-gray-400 outline-none focus:ring-2 focus:ring-[#0a4abf]"
                     />
+                    {usernameMessage ? (
+                      <p
+                        className={`mt-1 text-xs ${
+                          usernameStatus === "available"
+                            ? "text-green-600"
+                            : usernameStatus === "taken" ||
+                                usernameStatus === "invalid" ||
+                                usernameStatus === "error"
+                              ? "text-red-500"
+                              : "text-gray-500"
+                        }`}
+                      >
+                        {usernameMessage}
+                      </p>
+                    ) : null}
                   </label>
 
                   <label className="block">
@@ -291,7 +402,12 @@ export default function SignupPage() {
                     <button
                       type="button"
                       onClick={handleRegister}
-                      disabled={loading}
+                      disabled={
+                        loading ||
+                        usernameStatus === "checking" ||
+                        usernameStatus === "taken" ||
+                        usernameStatus === "invalid"
+                      }
                       className="w-full rounded-lg bg-[#0a4abf] text-white py-2.5 text-sm font-medium hover:brightness-110 disabled:opacity-60"
                     >
                       {loading ? (

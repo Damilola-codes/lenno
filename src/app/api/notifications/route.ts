@@ -30,6 +30,15 @@ function toClientType(value: string) {
   return value.toLowerCase() as "info" | "success" | "warning" | "error";
 }
 
+function isMissingNotificationTable(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes("P2021") ||
+    message.toLowerCase().includes("table") &&
+      message.toLowerCase().includes("notifications")
+  );
+}
+
 export async function GET() {
   try {
     const session = await getServerSession();
@@ -53,7 +62,11 @@ export async function GET() {
         timestamp: item.createdAt.toISOString(),
       })),
     );
-  } catch {
+  } catch (error) {
+    if (isMissingNotificationTable(error)) {
+      return NextResponse.json([]);
+    }
+
     return NextResponse.json(
       { error: "Failed to load notifications" },
       { status: 500 },
@@ -93,6 +106,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
+    if (isMissingNotificationTable(error)) {
+      return NextResponse.json(
+        { error: "Notifications are not ready. Run database migrations." },
+        { status: 503 },
+      );
+    }
+
     return NextResponse.json(
       { error: "Failed to create notification" },
       { status: 500 },
@@ -109,7 +129,11 @@ export async function DELETE() {
 
     await db.notification.deleteMany({ where: { userId: session.user.id } });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    if (isMissingNotificationTable(error)) {
+      return NextResponse.json({ ok: true });
+    }
+
     return NextResponse.json(
       { error: "Failed to clear notifications" },
       { status: 500 },

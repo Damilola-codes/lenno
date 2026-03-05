@@ -340,9 +340,15 @@ export default function Dashboard() {
       const userId = currentUser?.id || "demo-user-id";
 
       // Fetch stats
-      const statsResponse = await fetch(
+      let statsResponse = await fetch(
         `/api/dashboard/stats?range=${timeRange}&userId=${userId}`,
       );
+
+      if (statsResponse.status === 404 && userId !== "demo-user-id") {
+        statsResponse = await fetch(
+          `/api/dashboard/stats?range=${timeRange}&userId=demo-user-id`,
+        );
+      }
 
       if (!statsResponse.ok) {
         if (statsResponse.status === 400) {
