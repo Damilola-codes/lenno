@@ -5,7 +5,11 @@ import Link from "next/link";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [devResetUrl, setDevResetUrl] = useState("");
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary-50 to-white px-4 py-10">
@@ -20,14 +24,55 @@ export default function ForgotPasswordPage() {
 
         {submitted ? (
           <div className="mt-5 rounded-xl border border-[#b7dfc4] bg-[#f3fcf6] px-4 py-3 text-sm text-[#2d8a53]">
-            If this email exists, a reset link has been sent.
+            {message || "If this email exists, a reset link has been sent."}
+            {devResetUrl ? (
+              <p className="mt-2 break-all text-xs text-primary-900">
+                Dev reset link: {devResetUrl}
+              </p>
+            ) : null}
           </div>
         ) : (
           <form
             className="mt-5 space-y-3"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault();
-              setSubmitted(true);
+              setLoading(true);
+              setError("");
+              setDevResetUrl("");
+
+              try {
+                const response = await fetch("/api/auth/forgot-password", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ email: email.trim() }),
+                });
+
+                const data = (await response.json()) as {
+                  message?: string;
+                  error?: string;
+                  resetUrl?: string;
+                };
+
+                if (!response.ok) {
+                  setError(
+                    data.error || "Unable to send reset link right now.",
+                  );
+                  return;
+                }
+
+                setMessage(
+                  data.message ||
+                    "If this email exists, a reset link has been sent.",
+                );
+                if (data.resetUrl) {
+                  setDevResetUrl(data.resetUrl);
+                }
+                setSubmitted(true);
+              } catch {
+                setError("Unable to send reset link right now.");
+              } finally {
+                setLoading(false);
+              }
             }}
           >
             <label className="block">
@@ -44,10 +89,12 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
-              className="w-full rounded-lg bg-[#0a4abf] py-2.5 text-sm font-medium text-white hover:brightness-110"
+              disabled={loading}
+              className="w-full rounded-lg bg-[#0a4abf] py-2.5 text-sm font-medium text-white hover:brightness-110 disabled:opacity-60"
             >
-              Send reset link
+              {loading ? "Sending..." : "Send reset link"}
             </button>
+            {error ? <p className="text-xs text-red-500">{error}</p> : null}
           </form>
         )}
 

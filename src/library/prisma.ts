@@ -21,10 +21,28 @@ type GenericDelegate = {
     create: (args: unknown) => Promise<unknown>;
 };
 
+type PasswordResetTokenRecord = {
+    id: string;
+    userId: string;
+    tokenHash: string;
+    expiresAt: Date;
+    usedAt: Date | null;
+    createdAt: Date;
+    user?: { id: string };
+};
+
+type PasswordResetTokenDelegate = {
+    findUnique: (args: unknown) => Promise<PasswordResetTokenRecord | null>;
+    create: (args: unknown) => Promise<PasswordResetTokenRecord>;
+    update: (args: unknown) => Promise<PasswordResetTokenRecord>;
+    updateMany: (args: unknown) => Promise<{ count: number }>;
+};
+
 type ExtendedPrismaClient = PrismaClient & {
     notification: NotificationDelegate;
     invoiceRequest: GenericDelegate;
     progressLog: GenericDelegate;
+    passwordResetToken: PasswordResetTokenDelegate;
 };
 
 const globalForPrisma = globalThis as unknown as {

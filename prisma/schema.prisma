@@ -87,6 +87,7 @@ model User {
   notifications Notification[]
   invoiceRequests InvoiceRequest[]
   progressLogs ProgressLog[]
+  passwordResetTokens PasswordResetToken[]
 
   @@index([userType])
   @@index([createdAt])
@@ -281,4 +282,19 @@ model Review {
   receiver     User    @relation("ReviewReceiver", fields: [receiverId], references: [id])
   
   @@map("reviews")
+}
+
+model PasswordResetToken {
+  id         String   @id @default(cuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
