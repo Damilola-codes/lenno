@@ -607,9 +607,15 @@ export default function JobsPage() {
             variant="outline"
             size="sm"
             onClick={() => setShowFilters(true)}
+            className="rounded-full border-[#0a4abf] bg-[#0a4abf] text-white hover:bg-[#093e9f] hover:text-white"
           >
             <FunnelIcon className="w-4 h-4 mr-2" />
             Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#abff31] px-1.5 text-[11px] font-semibold text-primary-900">
+                {activeFilterCount}
+              </span>
+            )}
           </Button>
         </div>
 
@@ -953,10 +959,19 @@ export default function JobsPage() {
               </div>
 
               <div className="flex gap-3">
-                <Button onClick={applyFilters} fullWidth>
+                <Button
+                  onClick={applyFilters}
+                  fullWidth
+                  className="rounded-full bg-[#0a4abf] text-white hover:bg-[#093e9f]"
+                >
                   Apply Filters
                 </Button>
-                <Button onClick={clearFilters} variant="outline" fullWidth>
+                <Button
+                  onClick={clearFilters}
+                  variant="outline"
+                  fullWidth
+                  className="rounded-full border-none bg-[#abff31] text-primary-900 hover:bg-[#9ae62c]"
+                >
                   Clear All
                 </Button>
               </div>

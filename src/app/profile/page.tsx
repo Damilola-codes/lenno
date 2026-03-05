@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
-  BookmarkIcon,
   BriefcaseIcon,
   MapPinIcon,
   PencilSquareIcon,
@@ -307,6 +306,22 @@ function derivePricing(hourlyRate?: number): PricingPref {
   return hourlyRate && hourlyRate > 0 ? "Both" : "Project-based";
 }
 
+function cycleAvailability(current: AvailabilityPref): AvailabilityPref {
+  if (current === "Open to fixed contracts") {
+    return "Open to hourly contracts";
+  }
+  if (current === "Open to hourly contracts") {
+    return "Open to hourly and fixed contracts";
+  }
+  return "Open to fixed contracts";
+}
+
+function pricingFromAvailability(availability: AvailabilityPref): PricingPref {
+  if (availability === "Open to fixed contracts") return "Project-based";
+  if (availability === "Open to hourly contracts") return "Hourly-based";
+  return "Both";
+}
+
 function calculateProfileCompletion(model: ProfileViewModel): number {
   const checks = [
     model.firstName.trim().length > 0,
@@ -336,6 +351,12 @@ function toProfileViewModel(
     .map((item) => item.name)
     .filter(Boolean);
   const hourlyRate = data.profile?.hourlyRate ?? undefined;
+  const totalReviews = Number(data.totalReviews || 0);
+  const rawRating = Number(data.averageRating || 0);
+  const normalizedRating =
+    Number.isFinite(rawRating) && rawRating > 0
+      ? Math.max(1, Math.min(5, rawRating))
+      : 0;
 
   const model: ProfileViewModel = {
     id: data.id || "local",
@@ -343,19 +364,15 @@ function toProfileViewModel(
     lastName,
     fullName,
     username: data.username || "member",
-    title: data.profile?.title || "Freelance Professional",
-    description:
-      data.profile?.description ||
-      "Verified freelancer profile. Open to new projects and collaborations.",
+    title: data.profile?.title?.trim() || "",
+    description: data.profile?.description?.trim() || "",
     avatar:
       data.profile?.avatar || pickDefaultAvatar(data.username || fullName),
     location: data.profile?.location || undefined,
-    skills: skills.length
-      ? skills.slice(0, 10)
-      : ["UI/UX Design", "Web Development"],
+    skills: skills.slice(0, 10),
     hourlyRate,
-    averageRating: Number((data.averageRating ?? 4.5).toFixed(1)),
-    totalReviews: data.totalReviews ?? 0,
+    averageRating: totalReviews > 0 ? Number(normalizedRating.toFixed(1)) : 0,
+    totalReviews,
     completedJobs: data._count?.contracts || 0,
     amountMade,
     availability: deriveAvailability(hourlyRate),
@@ -466,7 +483,6 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<ProfileViewModel | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [bookmarked, setBookmarked] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -655,6 +671,35 @@ export default function ProfilePage() {
       profile.amountMade === 0
     );
   }, [profile]);
+
+  const toggleWorkPreference = () => {
+    if (!profile) return;
+    const currentUser = Auth.getCurrentUser();
+    if (!currentUser) return;
+
+    const nextAvailability = cycleAvailability(profile.availability);
+    const nextPreferredPricing = pricingFromAvailability(nextAvailability);
+    const nextModel = {
+      ...profile,
+      availability: nextAvailability,
+      preferredPricing: nextPreferredPricing,
+    };
+    nextModel.profileCompletion = calculateProfileCompletion(nextModel);
+
+    setProfile(nextModel);
+    setForm((prev) => ({
+      ...prev,
+      availability: nextAvailability,
+      preferredPricing: nextPreferredPricing,
+    }));
+
+    writeLocalEdits(currentUser.id, {
+      ...readLocalEdits(currentUser.id),
+      availability: nextAvailability,
+      preferredPricing: nextPreferredPricing,
+    });
+    setSuccessMessage(`Work preference updated: ${nextAvailability}.`);
+  };
 
   const saveProfile = async () => {
     if (!profile) return;
@@ -930,7 +975,7 @@ export default function ProfilePage() {
                 {profile.fullName}
               </h1>
               <p className="mt-1 text-base text-primary-700 sm:text-lg">
-                {profile.title}
+                {profile.title || "Add a professional title"}
               </p>
             </div>
 
@@ -957,7 +1002,14 @@ export default function ProfilePage() {
                 </p>
                 <p className="h-8 flex items-center justify-center gap-1 text-lg font-semibold text-primary-900 sm:text-xl">
                   <StarIcon className="h-4 w-4 text-[#f4c400] sm:h-5 sm:w-5" />
-                  {profile.averageRating.toFixed(1)}
+                  {profile.totalReviews > 0
+                    ? profile.averageRating.toFixed(1)
+                    : "New"}
+                </p>
+                <p className="text-[11px] text-primary-600">
+                  {profile.totalReviews > 0
+                    ? `${profile.totalReviews} review${profile.totalReviews === 1 ? "" : "s"}`
+                    : "No reviews yet"}
                 </p>
               </div>
               <div className="border-l border-r border-primary-200 px-1 flex flex-col items-start gap-1">
@@ -994,12 +1046,11 @@ export default function ProfilePage() {
                   : "Buy connects to apply"}
               </button>
               <button
-                onClick={() => setBookmarked((prev) => !prev)}
+                onClick={toggleWorkPreference}
                 className="h-11 w-11 rounded-full border border-primary-100 bg-white/70 flex items-center justify-center"
+                title="Toggle work preference"
               >
-                <BookmarkIcon
-                  className={`h-5 w-5 ${bookmarked ? "fill-[#abff31] text-[#7fbf17]" : "text-primary-800"}`}
-                />
+                <BriefcaseIcon className="h-5 w-5 text-primary-800" />
               </button>
             </div>
           </div>
@@ -1054,9 +1105,16 @@ export default function ProfilePage() {
               <span>Completed jobs: {profile.completedJobs}</span>
               <span>Member since {memberSince}</span>
             </div>
-            <p className="mt-3 leading-relaxed text-primary-800">
-              {profile.description}
-            </p>
+            {profile.description ? (
+              <p className="mt-3 leading-relaxed text-primary-800">
+                {profile.description}
+              </p>
+            ) : (
+              <p className="mt-3 leading-relaxed text-primary-600">
+                Add a short bio about your expertise, services, and the types
+                of projects you want to work on.
+              </p>
+            )}
             <p className="mt-2 text-xs text-primary-600">
               Profile completion: {profile.profileCompletion}%
             </p>
@@ -1108,6 +1166,10 @@ export default function ProfilePage() {
             <p className="mt-2">{profile.availability}</p>
             <p className="mt-1">
               Preferred pricing: {profile.preferredPricing}
+            </p>
+            <p className="mt-1 text-xs text-primary-600">
+              Tap the briefcase button in the header to quickly cycle
+              availability.
             </p>
             <p className="mt-1">Recent reviews: {profile.totalReviews}</p>
           </div>

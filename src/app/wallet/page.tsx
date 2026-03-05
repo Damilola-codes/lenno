@@ -66,42 +66,14 @@ const topUpMethods: TopUpMethod[] = [
   { id: "usdc", label: "USDC Wallet", detail: "ERC20 / Polygon" },
 ];
 
-const defaultTransactions: WalletTransaction[] = [
-  {
-    id: "tx-1",
-    title: "Transfer For Jason",
-    date: "March 18, 2024",
-    amount: 230,
-    currencyLabel: "Lenno Cash",
-    type: "credit",
-    timestamp: new Date(Date.now() - 86400000).toISOString(),
-  },
-  {
-    id: "tx-2",
-    title: "Payment Figma Pro",
-    date: "March 17, 2024",
-    amount: -50,
-    currencyLabel: "Lenno Cash",
-    type: "debit",
-    timestamp: new Date(Date.now() - 172800000).toISOString(),
-  },
-  {
-    id: "tx-3",
-    title: "Payment Apple Music",
-    date: "March 17, 2024",
-    amount: -12,
-    currencyLabel: "Lenno Cash",
-    type: "debit",
-    timestamp: new Date(Date.now() - 259200000).toISOString(),
-  },
-];
+const defaultTransactions: WalletTransaction[] = [];
 
 const defaultStats: WalletStats = {
-  balance: 1459.7,
+  balance: 0,
   pendingBalance: 0,
-  totalEarned: 1459.7,
-  totalSpent: 127.96,
-  neoPoints: 320,
+  totalEarned: 0,
+  totalSpent: 0,
+  neoPoints: 0,
   level: 1,
 };
 
@@ -156,8 +128,7 @@ function normalizeTransactions(raw: string | null): WalletTransaction[] {
     const parsed = JSON.parse(raw) as Array<
       WalletTransaction | LegacyWalletTransaction
     >;
-    if (!Array.isArray(parsed) || parsed.length === 0)
-      return defaultTransactions;
+    if (!Array.isArray(parsed) || parsed.length === 0) return defaultTransactions;
 
     return parsed.map((item, index) => {
       if ("title" in item && "date" in item) {
@@ -324,6 +295,7 @@ export default function WalletPage() {
 
   const chartData = statRange === "weekly" ? weeklyData : monthlyData;
   const activeDataPoint = chartData[activeBarIndex] || chartData[0];
+  const hasTransactions = transactions.length > 0;
 
   const incomeTotal = useMemo(
     () =>
@@ -800,31 +772,42 @@ export default function WalletPage() {
               </div>
 
               <div className="mt-2 space-y-2">
-                {transactions.slice(0, 3).map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedTransaction(item)}
-                    className="w-full rounded-2xl border border-primary-200 bg-white px-3 py-2 flex items-center justify-between text-left"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-primary-900">
-                        {item.title}
-                      </p>
-                      <p className="text-xs text-primary-500">{item.date}</p>
-                    </div>
-                    <div className="text-right">
-                      <p
-                        className={`text-sm font-semibold ${item.amount >= 0 ? "text-[#2e7b4d]" : "text-primary-800"}`}
-                      >
-                        {item.amount >= 0 ? "+" : "-"}${" "}
-                        {formatMoney(Math.abs(item.amount))}
-                      </p>
-                      <p className="text-xs text-primary-500">
-                        {item.currencyLabel}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                {hasTransactions ? (
+                  transactions.slice(0, 3).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setSelectedTransaction(item)}
+                      className="w-full rounded-2xl border border-primary-200 bg-white px-3 py-2 flex items-center justify-between text-left"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-primary-900">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-primary-500">{item.date}</p>
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className={`text-sm font-semibold ${item.amount >= 0 ? "text-[#2e7b4d]" : "text-primary-800"}`}
+                        >
+                          {item.amount >= 0 ? "+" : "-"}${" "}
+                          {formatMoney(Math.abs(item.amount))}
+                        </p>
+                        <p className="text-xs text-primary-500">
+                          {item.currencyLabel}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-primary-200 bg-primary-50 px-4 py-5 text-center">
+                    <p className="text-sm font-medium text-primary-800">
+                      No transactions yet
+                    </p>
+                    <p className="mt-1 text-xs text-primary-600">
+                      Top up or transfer funds to start building wallet history.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1081,27 +1064,38 @@ export default function WalletPage() {
               </h3>
 
               <div className="mt-4 max-h-[60vh] overflow-y-auto space-y-2 pr-1">
-                {transactions.map((item) => (
-                  <button
-                    key={`history-modal-${item.id}`}
-                    onClick={() => {
-                      setSelectedTransaction(item);
-                      setIsHistoryModalOpen(false);
-                    }}
-                    className="w-full rounded-xl border border-primary-100 px-3 py-2 flex items-center justify-between text-left hover:bg-primary-50"
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-primary-900">
-                        {item.title}
+                {hasTransactions ? (
+                  transactions.map((item) => (
+                    <button
+                      key={`history-modal-${item.id}`}
+                      onClick={() => {
+                        setSelectedTransaction(item);
+                        setIsHistoryModalOpen(false);
+                      }}
+                      className="w-full rounded-xl border border-primary-100 px-3 py-2 flex items-center justify-between text-left hover:bg-primary-50"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-primary-900">
+                          {item.title}
+                        </p>
+                        <p className="text-xs text-primary-500">{item.date}</p>
+                      </div>
+                      <p className="text-sm font-semibold text-primary-800">
+                        {item.amount >= 0 ? "+" : "-"}${" "}
+                        {formatMoney(Math.abs(item.amount))}
                       </p>
-                      <p className="text-xs text-primary-500">{item.date}</p>
-                    </div>
-                    <p className="text-sm font-semibold text-primary-800">
-                      {item.amount >= 0 ? "+" : "-"}${" "}
-                      {formatMoney(Math.abs(item.amount))}
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-2xl border border-primary-100 bg-primary-50 px-4 py-5 text-center">
+                    <p className="text-sm font-medium text-primary-800">
+                      No history available
                     </p>
-                  </button>
-                ))}
+                    <p className="mt-1 text-xs text-primary-600">
+                      Your transaction history will appear here after wallet activity.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           </div>

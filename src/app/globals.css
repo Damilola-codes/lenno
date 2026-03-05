@@ -143,14 +143,19 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 
-  /* Prevent mobile browsers (notably iOS Safari) from zooming inputs when focused
-     by ensuring form controls have a minimum readable font-size on small screens. */
-  input,
-  textarea,
-  select,
-  button {
+  /* Prevent iOS Safari from zooming form controls on focus. */
+  html {
     -webkit-text-size-adjust: 100%;
-    font-size: 10xp; /* prevents iOS zoom on focus when font-size < 16px */
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    @media (max-width: 1024px) {
+      input,
+      textarea,
+      select {
+        font-size: 16px !important;
+      }
+    }
   }
 
   /* Keyframe definitions for custom animations */
@@ -192,6 +197,14 @@
 }
 
 @layer utilities {
+  @supports (-webkit-touch-callout: none) {
+    @media (max-width: 1024px) {
+      .ios-input-safe {
+        font-size: 16px !important;
+      }
+    }
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
