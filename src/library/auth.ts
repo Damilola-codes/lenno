@@ -82,6 +82,7 @@ export class Auth {
     if (typeof window === 'undefined') return
     localStorage.removeItem(this.SESSION_KEY)
     localStorage.removeItem(this.TOKEN_KEY)
+    localStorage.removeItem('auth-user')
     this.clearSessionCookie()
   }
 
@@ -118,9 +119,19 @@ export class Auth {
     }
   }
 
-  static signOut(): void {
+  static async signOut(redirectTo: string = '/auth/signin'): Promise<void> {
     this.clearSession()
-    if (typeof window !== 'undefined') window.location.href = '/auth/signup'
+
+    if (typeof window === 'undefined') return
+
+    try {
+      const nextAuth = await import('next-auth/react')
+      await nextAuth.signOut({ redirect: false })
+    } catch {
+      // Continue even if NextAuth is not active for this session
+    }
+
+    window.location.href = redirectTo
   }
 }
 

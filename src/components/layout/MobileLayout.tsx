@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import {
+  ArrowRightOnRectangleIcon,
   Bars3Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -19,6 +20,7 @@ import {
 import { cn } from "@/library/utils";
 import NotificationBell from "@/components/ui/NotificationBell";
 import LanguageSelector from "@/components/ui/LanguageSelector";
+import { Auth } from "@/library/auth";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -38,6 +40,10 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  const handleLogout = () => {
+    void Auth.signOut("/auth/signin");
+  };
 
   return (
     <div className="min-h-screen bg-primary-50">
@@ -101,6 +107,20 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
                 </Link>
               );
             })}
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={cn(
+                "w-full flex items-center py-2.5 text-sm font-medium rounded-full transition-all duration-200 text-[#6b7280] hover:text-[#b6455f] hover:bg-[#fff4f6]",
+                sidebarCollapsed ? "justify-center px-2" : "justify-start px-3",
+              )}
+            >
+              <ArrowRightOnRectangleIcon
+                className={cn("w-4 h-4", !sidebarCollapsed && "mr-2.5")}
+              />
+              {!sidebarCollapsed && "Logout"}
+            </button>
           </nav>
 
           {/* Language Selector - Bottom of Sidebar */}
@@ -168,6 +188,15 @@ export default function MobileLayout({ children }: MobileLayoutProps) {
                   </Link>
                 );
               })}
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-full transition-all duration-200 text-[#6b7280] hover:text-[#b6455f] hover:bg-[#fff4f6]"
+              >
+                <ArrowRightOnRectangleIcon className="w-4 h-4 mr-2.5" />
+                Logout
+              </button>
 
               {/* Language Selector in Mobile Menu */}
               <div className="px-0">

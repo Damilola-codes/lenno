@@ -11,6 +11,7 @@ import HomePromise from "@/components/home/HomePromise";
 import HomeFaq from "@/components/home/HomeFaq";
 import HomeApplicationExperience from "@/components/home/HomeApplicationExperience";
 import HomeCta from "@/components/home/HomeCta";
+import { Auth } from "@/library/auth";
 // SDK and debug removed — homepage is now generic
 
 export default function HomePage() {
@@ -45,7 +46,7 @@ export default function HomePage() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("auth-user");
+    void Auth.signOut("/");
     setSavedUser(null);
   };
 
