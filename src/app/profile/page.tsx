@@ -1111,8 +1111,8 @@ export default function ProfilePage() {
               </p>
             ) : (
               <p className="mt-3 leading-relaxed text-primary-600">
-                Add a short bio about your expertise, services, and the types
-                of projects you want to work on.
+                Add a short bio about your expertise, services, and the types of
+                projects you want to work on.
               </p>
             )}
             <p className="mt-2 text-xs text-primary-600">

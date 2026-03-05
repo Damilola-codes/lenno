@@ -128,7 +128,8 @@ function normalizeTransactions(raw: string | null): WalletTransaction[] {
     const parsed = JSON.parse(raw) as Array<
       WalletTransaction | LegacyWalletTransaction
     >;
-    if (!Array.isArray(parsed) || parsed.length === 0) return defaultTransactions;
+    if (!Array.isArray(parsed) || parsed.length === 0)
+      return defaultTransactions;
 
     return parsed.map((item, index) => {
       if ("title" in item && "date" in item) {
@@ -1092,7 +1093,8 @@ export default function WalletPage() {
                       No history available
                     </p>
                     <p className="mt-1 text-xs text-primary-600">
-                      Your transaction history will appear here after wallet activity.
+                      Your transaction history will appear here after wallet
+                      activity.
                     </p>
                   </div>
                 )}
