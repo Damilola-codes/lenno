@@ -8,21 +8,21 @@ const slides = [
     src: "/heroman.png",
     alt: "Auth visual one",
     quote:
-      "\"Lenno helped me get my first remote client in less than a week. The process felt simple and I could focus on my work, not chasing leads.\"",
+      '"Lenno helped me get my first remote client in less than a week. The process felt simple and I could focus on my work, not chasing leads."',
     author: "Davis - Product Designer",
   },
   {
     src: "/image1.png",
     alt: "Auth visual two",
     quote:
-      "\"I posted a role and got quality proposals fast. Every profile showed exactly what I needed to make a confident hiring decision.\"",
+      '"I posted a role and got quality proposals fast. Every profile showed exactly what I needed to make a confident hiring decision."',
     author: "Jordan - Startup Founder",
   },
   {
     src: "/image3.png",
     alt: "Auth visual three",
     quote:
-      "\"Payments and milestones are very clear on Lenno. I always know what stage a project is in and when I should expect payout.\"",
+      '"Payments and milestones are very clear on Lenno. I always know what stage a project is in and when I should expect payout."',
     author: "Alexa - Marketing Consultant",
   },
 ];
