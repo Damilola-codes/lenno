@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
   ClockIcon,
   MapPinIcon,
@@ -51,8 +50,7 @@ const proposalCardColors = [
 ];
 
 export default function ProposalsPage() {
-  const searchParams = useSearchParams();
-  const selectedJobIdFromUrl = searchParams.get("jobId");
+  const [selectedJobIdFromUrl, setSelectedJobIdFromUrl] = useState("");
 
   const [jobs, setJobs] = useState<JobOption[]>([]);
   const [proposals, setProposals] = useState<ProposalRecord[]>([]);
@@ -105,6 +103,12 @@ export default function ProposalsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const jobId = new URLSearchParams(window.location.search).get("jobId");
+    if (jobId) setSelectedJobIdFromUrl(jobId);
+  }, []);
 
   useEffect(() => {
     loadData();
