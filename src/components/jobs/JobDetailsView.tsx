@@ -251,7 +251,9 @@ export default function JobDetailsView({ job }: JobDetailsViewProps) {
               <div className="flex items-center gap-2">
                 <Button
                   className="bg-[#0a4abf] hover:bg-[#083c9b] text-white"
-                  onClick={() => setShowApplicationSuccess(true)}
+                  onClick={() => {
+                    window.location.href = `/proposals?jobId=${job.id}`;
+                  }}
                 >
                   Apply Now
                 </Button>

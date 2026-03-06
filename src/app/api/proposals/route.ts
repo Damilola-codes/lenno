@@ -44,8 +44,53 @@ export async function GET(req: NextRequest) {
 
     const { searchParams } = new URL(req.url)
     const jobId = searchParams.get('jobId')
+    const mine = searchParams.get('mine')
+
+    if (mine === '1' || mine === 'true') {
+      const proposals = await prisma.proposal.findMany({
+        where: { freelancerId: session.user.id },
+        include: {
+          job: {
+            select: {
+              id: true,
+              title: true,
+              budget: true,
+              isHourly: true,
+              status: true,
+              createdAt: true,
+              client: {
+                select: {
+                  firstName: true,
+                  lastName: true,
+                  username: true,
+                  profile: {
+                    select: {
+                      location: true,
+                    },
+                  },
+                },
+              },
+              skills: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+                take: 6,
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      return NextResponse.json({ proposals })
+    }
+
     if (!jobId) {
-      return NextResponse.json({ error: 'Job ID is required' }, { status: 400 })
+      return NextResponse.json(
+        { error: 'Job ID is required unless mine=1 is provided' },
+        { status: 400 },
+      )
     }
     
     const proposals = await prisma.proposal.findMany({

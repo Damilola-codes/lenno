@@ -60,25 +60,27 @@ export default function AuthVisualCarousel() {
       ))}
 
       <div className="absolute inset-0 bg-gradient-to-t from-[#0a4abf]/70 via-black/25 to-transparent" />
-      <div className="absolute top-4 left-4 w-9 h-9 rounded-md bg-green-400 flex items-center justify-center">
+      <div className="absolute top-3 left-3 h-8 w-8 rounded-md bg-green-400 flex items-center justify-center sm:top-4 sm:left-4 sm:h-9 sm:w-9">
         <Image
           src="/quote.png"
           alt="Quote icon"
-          width={18}
-          height={18}
+          width={16}
+          height={16}
           quality={100}
-          className="object-contain"
+          className="object-contain sm:h-[18px] sm:w-[18px]"
         />
       </div>
 
-      <div className="absolute bottom-7 left-6 right-6 text-white">
-        <p className="text-2xl font-semibold leading-tight">
+      <div className="absolute bottom-6 left-4 right-4 text-white sm:bottom-7 sm:left-6 sm:right-6">
+        <p className="text-base font-semibold leading-snug sm:text-lg sm:leading-snug lg:text-2xl lg:leading-tight">
           {slides[activeIndex].quote}
         </p>
-        <p className="mt-4 text-lg font-medium">{slides[activeIndex].author}</p>
+        <p className="mt-2 text-xs font-medium sm:mt-3 sm:text-sm lg:mt-4 lg:text-lg">
+          {slides[activeIndex].author}
+        </p>
       </div>
 
-      <div className="absolute bottom-2 left-4 right-4 flex gap-2">
+      <div className="absolute bottom-2 left-3 right-3 flex gap-1.5 sm:left-4 sm:right-4 sm:gap-2">
         {slides.map((slide, index) => (
           <span
             key={slide.src}

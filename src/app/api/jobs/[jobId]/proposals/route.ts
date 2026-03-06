@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/library/auth";
 import { prisma } from "@/library/prisma";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 
 const createProposalSchema = z.object({
@@ -141,8 +142,30 @@ export async function POST(
     const { jobId } = await params
     const session = await getServerSession();
     
-    if (!session || session.user.userType !== "FREELANCER") {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const freelancer = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, userType: true },
+    });
+
+    if (!freelancer) {
+      return NextResponse.json(
+        {
+          error:
+            "Freelancer account not found. Please sign out and sign in again.",
+        },
+        { status: 404 },
+      );
+    }
+
+    if (freelancer.userType !== "FREELANCER") {
+      return NextResponse.json(
+        { error: "Only freelancers can submit proposals" },
+        { status: 403 },
+      );
     }
 
     const body = await req.json();
@@ -167,7 +190,7 @@ export async function POST(
       where: {
         jobId_freelancerId: {
           jobId,
-          freelancerId: session.user.id
+          freelancerId: freelancer.id
         }
       }
     });
@@ -182,7 +205,7 @@ export async function POST(
     const proposal = await prisma.proposal.create({
       data: {
         jobId,
-        freelancerId: session.user.id,
+        freelancerId: freelancer.id,
         coverLetter: validatedData.coverLetter,
         proposedRate: validatedData.proposedRate,
         duration: validatedData.duration
@@ -210,6 +233,27 @@ export async function POST(
       const message = error.issues.map((i: z.ZodIssue) => i.message).join('; ')
       return NextResponse.json({ error: message, details: error.issues }, { status: 400 });
     }
+
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === "P2002") {
+        return NextResponse.json(
+          { error: "You have already submitted a proposal for this job" },
+          { status: 400 },
+        );
+      }
+
+      if (error.code === "P2003") {
+        return NextResponse.json(
+          {
+            error:
+              "Unable to submit proposal due to an invalid account or job reference. Please refresh and try again.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    console.error("Proposal submit error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

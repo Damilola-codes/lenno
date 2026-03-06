@@ -5,9 +5,7 @@ import { motion } from "framer-motion";
 import {
   BriefcaseIcon,
   CalendarDaysIcon,
-  ChevronRightIcon,
   ClipboardDocumentListIcon,
-  EllipsisVerticalIcon,
   EnvelopeIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
@@ -25,7 +23,6 @@ import {
   TrendingUp,
   Calendar,
   Briefcase,
-  Plus,
   ChevronRight,
 } from "lucide-react";
 import MobileLayout from "@/components/layout/MobileLayout";
@@ -56,17 +53,27 @@ interface WalletLocalStats {
 
 interface RecentActivity {
   id: string;
-  type:
-    | "job_completed"
-    | "payment_received"
-    | "proposal_accepted"
-    | "job_posted"
-    | "milestone_completed";
+  type: string;
   title: string;
   description: string;
   amount?: number;
   timestamp: string;
   status?: string;
+}
+
+interface DashboardJobOpportunity {
+  id: string;
+  title: string;
+  budget: number;
+  isHourly: boolean;
+  createdAt: string;
+  client: {
+    firstName: string;
+    profile?: {
+      location?: string;
+    };
+  };
+  skills: Array<{ id: string; name: string }>;
 }
 
 type TimeRange = "week" | "month" | "year";
@@ -90,6 +97,9 @@ interface ProgressForm {
 export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [jobOpportunities, setJobOpportunities] = useState<
+    DashboardJobOpportunity[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
@@ -183,7 +193,11 @@ export default function Dashboard() {
     }
 
     if (actionLabel === "New Proposal") {
-      runNavigationAction("Proposals", "/proposals");
+      const targetJobId = jobOpportunities[0]?.id;
+      runNavigationAction(
+        "Proposals",
+        targetJobId ? `/proposals?jobId=${targetJobId}` : "/proposals",
+      );
       return;
     }
 
@@ -370,33 +384,32 @@ export default function Dashboard() {
       const syncedStats = mergeDashboardWithWalletStats(statsData, userId);
       setStats(syncedStats);
 
-      // Fetch recent activity (mock data for now)
-      setRecentActivity([
-        {
-          id: "1",
-          type: "payment_received",
-          title: "Payment Received",
-          description: "Logo Design Project - Final Payment",
-          amount: 150,
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-          status: "completed",
-        },
-        {
-          id: "2",
-          type: "proposal_accepted",
-          title: "Proposal Accepted",
-          description: "Mobile App Development - iOS & Android",
-          timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: "3",
-          type: "milestone_completed",
-          title: "Milestone Completed",
-          description: "Website Redesign - Phase 1",
-          amount: 75,
-          timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        },
+      const [activityResponse, jobsResponse] = await Promise.all([
+        fetch(`/api/dashboard/activity?userId=${userId}&limit=8`, {
+          cache: "no-store",
+        }),
+        fetch(`/api/jobs?limit=6`, { cache: "no-store" }),
       ]);
+
+      if (activityResponse.ok) {
+        const activityData = (await activityResponse.json()) as {
+          activities?: RecentActivity[];
+        };
+        setRecentActivity(
+          Array.isArray(activityData.activities) ? activityData.activities : [],
+        );
+      } else {
+        setRecentActivity([]);
+      }
+
+      if (jobsResponse.ok) {
+        const jobsData = (await jobsResponse.json()) as {
+          jobs?: DashboardJobOpportunity[];
+        };
+        setJobOpportunities(Array.isArray(jobsData.jobs) ? jobsData.jobs : []);
+      } else {
+        setJobOpportunities([]);
+      }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       setError(
@@ -472,10 +485,17 @@ export default function Dashboard() {
   const getActivityIcon = (type: RecentActivity["type"]) => {
     switch (type) {
       case "payment_received":
+      case "payment_sent":
+      case "payment_processing":
         return <DollarSign className="w-4 h-4 text-green-600" />;
       case "proposal_accepted":
+      case "proposal_submitted":
+      case "proposal_received":
         return <CheckCircle className="w-4 h-4 text-secondary-600" />;
+      case "proposal_rejected":
+        return <Clock className="w-4 h-4 text-error-600" />;
       case "job_completed":
+      case "work_in_progress":
         return <CheckCircle className="w-4 h-4 text-green-600" />;
       case "job_posted":
         return <FileText className="w-4 h-4 text-primary-600" />;
@@ -584,199 +604,9 @@ export default function Dashboard() {
       },
     ];
 
-    const taskBoards = [
-      {
-        title: "Proposal Tasks",
-        color: "bg-[#2f8edc]",
-        count: 2,
-        items: [
-          {
-            title: "Send follow-up on Product Designer proposal",
-            description:
-              "Share timeline clarification and portfolio examples to strengthen your bid.",
-            date: "25 March",
-            assignee: "PD",
-            assigneeClass: "bg-[#e5ddff] text-[#5b5680]",
-          },
-          {
-            title: "Prepare intro video for Mobile App job",
-            description:
-              "Record a concise 60-second pitch and attach it to proposal.",
-            date: "10 April",
-            assignee: "MA",
-            assigneeClass: "bg-[#d9f1df] text-[#4b6353]",
-          },
-        ],
-      },
-      {
-        title: "Project Tasks",
-        color: "bg-[#28b6d4]",
-        count: 2,
-        items: [
-          {
-            title: "Deliver homepage redesign milestone",
-            description:
-              "Finalize responsive tweaks and submit assets for client review.",
-            date: "15 March",
-            assignee: "UI",
-            assigneeClass: "bg-[#cfe9f5] text-[#3d6071]",
-          },
-          {
-            title: "Upload sprint update and blockers",
-            description:
-              "Post progress summary in workspace before standup call.",
-            date: "19 April",
-            assignee: "SP",
-            assigneeClass: "bg-[#f8d8e3] text-[#6b5563]",
-          },
-        ],
-      },
-      {
-        title: "Payment Tasks",
-        color: "bg-[#19b364]",
-        count: 2,
-        items: [
-          {
-            title: "Send invoice for Logo Design final delivery",
-            description:
-              "Attach source files and confirm payment terms before sending.",
-            date: "17 April",
-            assignee: "IV",
-            assigneeClass: "bg-[#cfe9f5] text-[#3d6071]",
-          },
-          {
-            title: "Follow up pending milestone release",
-            description:
-              "Message client and confirm release date for milestone 2.",
-            date: "22 April",
-            assignee: "PM",
-            assigneeClass: "bg-[#e5ddff] text-[#5b5680]",
-          },
-        ],
-      },
-    ];
-
-    const totalTaskCount = taskBoards.reduce(
-      (count, board) => count + board.items.length,
-      0,
-    );
-
-    const recentActivityColumns = [
-      {
-        title: "Applied Jobs",
-        icon: BriefcaseIcon,
-        items: [
-          {
-            avatar: "▶",
-            avatarClass: "bg-[#e9ddff] text-[#7a3cff]",
-            title: "UI/UX Designer",
-            subtitle: "PixelFoundry Studio",
-            badge: "Interview stage",
-            badgeClass: "border-[#b8dfff] bg-[#e9f5ff] text-[#2f8edc]",
-          },
-          {
-            avatar: "✹",
-            avatarClass: "bg-[#ffe8d3] text-[#ff8a00]",
-            title: "Mobile Developer",
-            subtitle: "Nova Product Labs",
-            badge: "Submitted",
-            badgeClass: "border-[#d8dde6] bg-white text-[#6f7787]",
-          },
-          {
-            avatar: "◉",
-            avatarClass: "bg-[#dff0ff] text-[#2f8edc]",
-            title: "Brand Designer",
-            subtitle: "Wavelength Creative Co.",
-            badge: "Awaiting response",
-            badgeClass: "border-[#d8dde6] bg-white text-[#6f7787]",
-          },
-          {
-            avatar: "▭",
-            avatarClass: "bg-[#ffdfe5] text-[#e14b67]",
-            title: "Marketing Designer",
-            subtitle: "Orbit Commerce",
-            badge: "Shortlisted",
-            badgeClass: "border-[#e4c3ff] bg-[#f5ebff] text-[#9a58d0]",
-          },
-        ],
-      },
-      {
-        title: "Active Projects",
-        icon: ClipboardDocumentListIcon,
-        items: [
-          {
-            avatar: "SL",
-            avatarClass: "bg-[#c8f0d9] text-[#22303a]",
-            title: "Landing Page Revamp",
-            subtitle: "Aster Digital",
-            badge: "In progress",
-            badgeClass: "border-[#9de4b7] bg-[#e8f9f0] text-[#18a565]",
-          },
-          {
-            avatar: "DA",
-            avatarClass: "bg-[#f4dcc6] text-[#22303a]",
-            title: "Design System Audit",
-            subtitle: "Northwind Apps",
-            badge: "Review",
-            badgeClass: "border-[#ffd1ad] bg-[#fff2e8] text-[#dd7f2b]",
-          },
-          {
-            avatar: "SL",
-            avatarClass: "bg-[#f4eddc] text-[#22303a]",
-            title: "E-commerce Banner Set",
-            subtitle: "Wavelength Creative Co.",
-            badge: "In progress",
-            badgeClass: "border-[#9de4b7] bg-[#e8f9f0] text-[#18a565]",
-          },
-          {
-            avatar: "HJ",
-            avatarClass: "bg-[#f8d8e3] text-[#22303a]",
-            title: "Analytics Dashboard UI",
-            subtitle: "BluePeak Solutions",
-            badge: "Blocked",
-            badgeClass: "border-[#f3c2ca] bg-[#fff1f4] text-[#c74662]",
-          },
-        ],
-      },
-      {
-        title: "Client Messages",
-        icon: EnvelopeIcon,
-        items: [
-          {
-            avatar: "SL",
-            avatarClass: "bg-[#dec5f9] text-[#22303a]",
-            title: "Riri Rora",
-            subtitle: "Asked for updated timeline",
-            badge: "1 unread",
-            badgeClass: "border-[#d8dde6] bg-white text-[#6f7787]",
-          },
-          {
-            avatar: "SL",
-            avatarClass: "bg-[#f8d8e3] text-[#22303a]",
-            title: "Jesse James",
-            subtitle: "Sent feedback on draft",
-            badge: "Replied",
-            badgeClass: "border-[#d8dde6] bg-white text-[#6f7787]",
-          },
-          {
-            avatar: "SL",
-            avatarClass: "bg-[#bfe9e6] text-[#22303a]",
-            title: "Sam Dan",
-            subtitle: "Requested invoice copy",
-            badge: "2 unread",
-            badgeClass: "border-[#b8dfff] bg-[#e9f5ff] text-[#2f8edc]",
-          },
-          {
-            avatar: "SL",
-            avatarClass: "bg-[#c8d8f8] text-[#22303a]",
-            title: "Harrison James",
-            subtitle: "Approved milestone 1",
-            badge: "Completed",
-            badgeClass: "border-[#d8dde6] bg-white text-[#6f7787]",
-          },
-        ],
-      },
-    ];
+    const applyFromDashboard = (jobId: string) => {
+      window.location.href = `/proposals?jobId=${jobId}`;
+    };
 
     return (
       <MobileLayout>
@@ -1048,129 +878,131 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="bg-[#dfe8f5] rounded-2xl p-1 pb-4">
-            <h2 className="text-2xl font-medium text-slate-800 px-2 pb-5 pt-2">
-              Recent Activity
-            </h2>
-            <div className="grid grid-cols-1 xl:grid-cols-3 gap-2">
-              {recentActivityColumns.map((column) => (
-                <div
-                  key={column.title}
-                  className="bg-[#f3f6fb] rounded-3xl border border-[#d8e2f1] p-2 pb-4"
-                >
-                  <div className="flex items-center justify-between rounded-full bg-[#f7f9fc] border border-[#dce5f1] px-4 py-2">
-                    <div className="inline-flex items-center gap-2 text-slate-800">
-                      <column.icon className="w-5 h-5 text-slate-600" />
-                      <h3 className="text-lg font-medium text-slate-800 leading-none">
-                        {column.title}
-                      </h3>
-                    </div>
-                    <ChevronRightIcon className="w-4 h-4 text-slate-500" />
-                  </div>
-                  <div className="mt-3 space-y-2">
-                    {column.items.map((item) => (
-                      <div
-                        key={`${column.title}-${item.title}-${item.subtitle}`}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div
-                            className={`h-10 w-10 rounded-sm flex items-center justify-center text-base font-medium ${item.avatarClass}`}
-                          >
-                            {item.avatar}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-md font-medium text-slate-800 truncate leading-none">
-                              {item.title}
-                            </p>
-                            <p className="text-[10px] text-slate-500 truncate mt-1 leading-none">
-                              {item.subtitle}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="inline-flex items-center gap-2 pl-2 text-sm">
-                          <span
-                            className={`inline-flex items-center rounded-full border px-3 py-1 text-[9px] font-medium whitespace-nowrap ${item.badgeClass}`}
-                          >
-                            {item.badge}
-                          </span>
-                          <button className="text-slate-500 hover:text-slate-700">
-                            <EllipsisVerticalIcon className="w-5 h-5" />
-                          </button>
+          <div className="bg-[#dfe8f5] rounded-2xl p-3">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-2xl font-medium text-slate-800">
+                Recent Activity
+              </h2>
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => runNavigationAction("Proposals", "/proposals")}
+              >
+                View proposals
+              </Button>
+            </div>
+
+            <div className="rounded-3xl border border-[#d8e2f1] bg-[#f7f9fc] p-3 space-y-2">
+              {recentActivity.length > 0 ? (
+                recentActivity.slice(0, 8).map((activity) => (
+                  <div
+                    key={activity.id}
+                    className="rounded-2xl border border-[#dce5f1] bg-white p-3"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="inline-flex items-center gap-2 min-w-0">
+                        <span className="h-8 w-8 rounded-full bg-primary-50 border border-primary-200 flex items-center justify-center">
+                          {getActivityIcon(activity.type)}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-slate-800 truncate">
+                            {activity.title}
+                          </p>
+                          <p className="text-xs text-slate-500 truncate">
+                            {activity.description}
+                          </p>
                         </div>
                       </div>
-                    ))}
+                      <div className="text-right">
+                        {typeof activity.amount === "number" && (
+                          <p className="text-xs font-semibold text-slate-700">
+                            ${activity.amount.toFixed(2)}
+                          </p>
+                        )}
+                        <p className="text-[11px] text-slate-500">
+                          {formatTimeAgo(activity.timestamp)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-[#dce5f1] bg-white p-4 text-sm text-slate-600">
+                  No recent activity yet.
                 </div>
-              ))}
+              )}
             </div>
           </div>
 
-          <div className="bg-[#e9f7ee] rounded-2xl border border-[#c8e8d3] p-2">
-            <div className="flex items-center justify-between mb-2 px-1">
+          <div className="bg-[#e9f7ee] rounded-2xl border border-[#c8e8d3] p-3">
+            <div className="flex items-center justify-between mb-3">
               <h2 className="text-2xl font-semibold text-slate-800">
-                My Tasks
+                Jobs to Apply
               </h2>
               <span className="inline-flex items-center rounded-full border border-[#b7dfc4] bg-[#f3fcf6] px-3 py-1 text-xs font-medium text-[#2d8a53]">
-                {totalTaskCount} active tasks
+                {jobOpportunities.length} open jobs
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {taskBoards.map((group) => (
-                <div
-                  key={group.title}
-                  className="bg-[#f4fbf6] rounded-3xl border border-[#cfead9] p-2"
-                >
-                  <div className="flex items-center justify-between rounded-full bg-[#f8fdf9] border border-[#d8efdf] px-3 py-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span
-                        className={`w-2.5 h-2.5 rounded-full ${group.color}`}
-                      />
-                      <h3 className="font-medium text-slate-800">
-                        {group.title}
-                      </h3>
-                      <span className="inline-flex items-center justify-center h-5 min-w-5 rounded-full bg-[#e2f4e8] px-1.5 text-xs text-[#2d8a53]">
-                        {group.count}
+
+            {jobOpportunities.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                {jobOpportunities.slice(0, 6).map((job) => (
+                  <Card
+                    key={job.id}
+                    className="p-3 border border-[#d9ebdf] bg-white space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-xs text-slate-500">
+                          {formatTimeAgo(job.createdAt)}
+                        </p>
+                        <p className="text-lg font-semibold text-slate-900 leading-tight">
+                          {job.title}
+                        </p>
+                      </div>
+                      <span className="text-xs rounded-full bg-[#0a4abf] text-white px-2 py-1">
+                        {job.isHourly ? "Hourly" : "Fixed"}
                       </span>
                     </div>
-                    <button className="h-6 w-6 rounded-full bg-white border border-[#cde7d7] flex items-center justify-center text-[#2d8a53] hover:text-[#1f6f42]">
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                  <div className="mt-2 space-y-2">
-                    {group.items.map((task) => (
-                      <div
-                        key={`${group.title}-${task.title}`}
-                        className="rounded-2xl border border-[#d9ebdf] bg-white p-3"
+
+                    <div className="text-sm text-slate-600">
+                      {job.client.firstName} •{" "}
+                      {job.client.profile?.location || "Remote"}
+                    </div>
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {job.skills.slice(0, 3).map((skill) => (
+                        <span
+                          key={`${job.id}-${skill.id}`}
+                          className="inline-flex items-center rounded-full border border-primary-200 bg-primary-50 px-2.5 py-1 text-[11px] text-primary-700"
+                        >
+                          {skill.name}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-xl font-bold text-slate-900">
+                        ${job.budget.toLocaleString("en-US")}
+                        {job.isHourly ? "/hr" : ""}
+                      </p>
+                      <Button
+                        size="sm"
+                        className="rounded-full bg-[#abff31] text-primary-900 hover:bg-[#9ae62c]"
+                        onClick={() => applyFromDashboard(job.id)}
                       >
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="text-sm font-medium text-slate-900 leading-snug">
-                            {task.title}
-                          </p>
-                          <button className="text-slate-400 hover:text-slate-600">
-                            <EllipsisVerticalIcon className="w-4 h-4" />
-                          </button>
-                        </div>
-                        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                          {task.description}
-                        </p>
-                        <div className="mt-3 flex items-center justify-between border-t border-[#e7f2eb] pt-2.5">
-                          <div className="inline-flex items-center gap-1.5 text-sm text-slate-700">
-                            <CalendarDaysIcon className="w-4 h-4 text-slate-500" />
-                            <span>{task.date}</span>
-                          </div>
-                          <span
-                            className={`h-7 w-7 rounded-full text-xs font-medium flex items-center justify-center ${task.assigneeClass}`}
-                          >
-                            {task.assignee}
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+                        Apply
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border border-[#d9ebdf] bg-white p-4 text-sm text-slate-600">
+                No open jobs available right now.
+              </div>
+            )}
           </div>
         </div>
       </MobileLayout>

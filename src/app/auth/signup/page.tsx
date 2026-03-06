@@ -234,7 +234,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-gradient-to-b from-primary-50 to-white p-2 sm:p-3">
+    <div className="min-h-screen overflow-y-auto bg-gradient-to-b from-primary-50 to-white p-2 sm:p-3 lg:h-screen lg:overflow-hidden">
       <AuthErrorToast message={error} onClose={() => setError("")} />
       <AuthSuccessModal
         open={successOpen}
@@ -242,7 +242,7 @@ export default function SignupPage() {
         message="Welcome to Lenno. Redirecting to your dashboard..."
       />
 
-      <div className="max-w-6xl h-full mx-auto grid lg:grid-cols-2 gap-3 items-stretch border border-gray-300 rounded-2xl p-2 bg-white/70">
+      <div className="max-w-6xl min-h-[calc(100vh-1rem)] lg:h-full mx-auto grid lg:grid-cols-2 gap-3 items-stretch border border-gray-300 rounded-2xl p-2 bg-white/70">
         <AuthVisualCarousel />
 
         <div className="rounded-2xl bg-white p-4 sm:p-6 flex flex-col justify-center overflow-y-auto">
