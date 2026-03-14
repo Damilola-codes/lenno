@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "prisma generate && next dev --turbopack",
-    "build": "prisma generate && next build --turbopack",
+    "prisma:generate": "node scripts/prisma-generate.mjs",
+    "dev": "next dev --turbopack",
+    "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "npm run prisma:generate"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

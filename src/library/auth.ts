@@ -100,15 +100,21 @@ export class Auth {
     const currentUser = this.getCurrentUser()
     if (!currentUser) return false
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/switch-role', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: currentUser.email, currentRole: newRole, isExistingUser: true })
+        credentials: 'include',
+        body: JSON.stringify({ userType: newRole })
       })
       if (response.ok) {
         const data = await response.json()
-        if (data.user) {
-          this.setSession(data.user)
+        const nextUser = data?.user
+        if (nextUser?.id) {
+          this.setSession({
+            ...currentUser,
+            ...nextUser,
+            userType: nextUser.userType,
+          })
           return true
         }
       }

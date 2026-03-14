@@ -20,7 +20,7 @@ export default function AuthSuccessModal({
       <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-xl">
         <div className="mx-auto mb-4 w-24 h-24">
           <Image
-            src="/success-check.svg"
+            src="/successmark.png"
             alt="Success"
             width={96}
             height={96}
